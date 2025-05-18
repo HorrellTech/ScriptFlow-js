@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ScriptFlow - Visual JavaScript Scripting</title>
     <link rel="stylesheet" href="css/scriptflow.css">
+    <link rel="stylesheet" href="css/scriptflow-blocks.css">
     <style>
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -172,10 +173,11 @@
         <p>Save your visual scripts and load them later for further editing. Export your JavaScript code to use in any project.</p>
     </main>
 
+    <script src="js/block-initialization.js"></script>
     <script src="js/scriptflow.js"></script>
     <script>
         // Initialize ScriptFlow
-        const scriptFlow = new ScriptFlow({
+        window.scriptFlow = new ScriptFlow({
             onCodeGenerated: (code) => {
                 document.getElementById('generated-code').textContent = code;
             },

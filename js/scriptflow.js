@@ -28,282 +28,29 @@ class ScriptFlow {
         this.isPanning = false;
         this.lastPanX = 0;
         this.lastPanY = 0;
+
+        this.isResizing = false;
         
         // Track open subflows
         this.openSubflows = [];
         
         this.initializeBlocks();
         this.createModal();
+        this.setupKeyboardShortcuts();
     }
     
     /**
      * Initialize the block library with predefined blocks
      */
     initializeBlocks() {
-        this.blockLibrary = {
-            logic: {
-                name: "Logic",
-                blocks: {
-                    if: {
-                        name: "If Condition",
-                        category: "logic",
-                        inputs: ["condition"],
-                        outputs: ["true", "false"],
-                        template: (block) => `
-                            if (${block.inputs.condition || 'true'}) {
-                                ${block.outputs.true || '// True branch'}
-                            } else {
-                                ${block.outputs.false || '// False branch'}
-                            }
-                        `
-                    },
-                    comparison: {
-                        name: "Compare Values",
-                        category: "logic",
-                        inputs: ["value1", "value2"],
-                        outputs: ["result"],
-                        options: [
-                            { name: "operator", type: "select", options: ["==", "===", "!=", "!==", ">", "<", ">=", "<="] }
-                        ],
-                        template: (block) => `
-                            (${block.inputs.value1 || '0'} ${block.options.operator || '=='} ${block.inputs.value2 || '0'})
-                        `
-                    }
-                }
-            },
-            math: {
-                name: "Math",
-                blocks: {
-                    arithmetic: {
-                        name: "Arithmetic Operation",
-                        category: "math",
-                        inputs: ["value1", "value2"],
-                        outputs: ["result"],
-                        options: [
-                            { name: "operator", type: "select", options: ["+", "-", "*", "/", "%"] }
-                        ],
-                        template: (block) => `
-                            (${block.inputs.value1 || '0'} ${block.options.operator || '+'} ${block.inputs.value2 || '0'})
-                        `
-                    },
-                    random: {
-                        name: "Random Number",
-                        category: "math",
-                        inputs: ["min", "max"],
-                        outputs: ["result"],
-                        template: (block) => `
-                            Math.floor(Math.random() * (${block.inputs.max || '100'} - ${block.inputs.min || '0'} + 1) + ${block.inputs.min || '0'})
-                        `
-                    }
-                }
-            },
-            variables: {
-                name: "Variables",
-                blocks: {
-                    declare: {
-                        name: "Declare Variable",
-                        category: "variable",
-                        inputs: ["value"],
-                        outputs: [],
-                        options: [
-                            { name: "name", type: "text", default: "myVar" },
-                            { name: "type", type: "select", options: ["let", "const", "var"] }
-                        ],
-                        template: (block) => `
-                            ${block.options.type || 'let'} ${block.options.name || 'myVar'} = ${block.inputs.value || 'undefined'};
-                        `
-                    },
-                    get: {
-                        name: "Get Variable",
-                        category: "variable",
-                        inputs: [],
-                        outputs: ["value"],
-                        options: [
-                            { name: "name", type: "text", default: "myVar" }
-                        ],
-                        template: (block) => `${block.options.name || 'myVar'}`
-                    }
-                }
-            },
-            control: {
-                name: "Control Flow",
-                blocks: {
-                    loop: {
-                        name: "For Loop",
-                        category: "control",
-                        inputs: ["iterations"],
-                        outputs: ["body"],
-                        options: [
-                            { name: "counter", type: "text", default: "i" }
-                        ],
-                        template: (block) => `
-                            for(let ${block.options.counter || 'i'} = 0; ${block.options.counter || 'i'} < ${block.inputs.iterations || '10'}; ${block.options.counter || 'i'}++) {
-                                ${block.outputs.body || '// Loop body'}
-                            }
-                        `
-                    },
-                    while: {
-                        name: "While Loop",
-                        category: "control",
-                        inputs: ["condition"],
-                        outputs: ["body"],
-                        template: (block) => `
-                            while(${block.inputs.condition || 'true'}) {
-                                ${block.outputs.body || '// Loop body'}
-                            }
-                        `
-                    }
-                }
-            },
-            functions: {
-                name: "Functions",
-                blocks: {
-                    declare: {
-                        name: "Declare Function",
-                        category: "function",
-                        inputs: [],
-                        outputs: ["body"],
-                        options: [
-                            { name: "name", type: "text", default: "myFunction" },
-                            { name: "params", type: "text", default: "" }
-                        ],
-                        template: (block) => `
-                            function ${block.options.name || 'myFunction'}(${block.options.params || ''}) {
-                                ${block.outputs.body || '// Function body'}
-                            }
-                        `
-                    },
-                    call: {
-                        name: "Call Function",
-                        category: "function",
-                        inputs: ["params"],
-                        outputs: ["result"],
-                        options: [
-                            { name: "name", type: "text", default: "myFunction" }
-                        ],
-                        template: (block) => `${block.options.name || 'myFunction'}(${block.inputs.params || ''})`
-                    }
-                }
-            },
-            dom: {
-                name: "DOM Manipulation",
-                blocks: {
-                    querySelector: {
-                        name: "Query Selector",
-                        category: "dom",
-                        inputs: ["selector"],
-                        outputs: ["element"],
-                        template: (block) => `document.querySelector(${block.inputs.selector || "'element'"})`
-                    },
-                    addEventListener: {
-                        name: "Add Event Listener",
-                        category: "dom",
-                        inputs: ["element", "eventType"],
-                        outputs: ["callback"],
-                        template: (block) => `
-                            ${block.inputs.element || 'element'}.addEventListener(${block.inputs.eventType || "'click'"}, () => {
-                                ${block.outputs.callback || '// Event handler code'}
-                            });
-                        `
-                    }
-                }
-            },
-            utilities: {
-                name: "Utilities",
-                blocks: {
-                    consoleLog: {
-                        name: "Console Log",
-                        category: "utilities",
-                        inputs: ["value"],
-                        outputs: [],
-                        template: (block) => `
-                            console.log(${block.inputs.value || "''"});
-                        `
-                    },
-                    alert: {
-                        name: "Alert",
-                        category: "utilities",
-                        inputs: ["message"],
-                        options: [
-                            { name: "Alert Text", type: "text", default: "Warning!!!" }
-                        ],
-                        outputs: [],
-                        template: (block) => `
-                            alert(${block.inputs.message || "''"});
-                        `
-                    }
-                }
-            },
-            data: {
-                name: "Data",
-                blocks: {
-                    jsonParse: {
-                        name: "Parse JSON",
-                        category: "data",
-                        inputs: ["json"],
-                        outputs: ["object"],
-                        template: (block) => `
-                            JSON.parse(${block.inputs.json || "'{}'"})
-                        `
-                    },
-                    jsonStringify: {
-                        name: "Stringify JSON",
-                        category: "data",
-                        inputs: ["object"],
-                        outputs: ["json"],
-                        template: (block) => `
-                            JSON.stringify(${block.inputs.object || "{}"})
-                        `
-                    },
-                    arrayMap: {
-                        name: "Array Map",
-                        category: "data",
-                        inputs: ["array"],
-                        outputs: ["result"],
-                        options: [
-                            { name: "itemName", type: "text", default: "item" }
-                        ],
-                        template: (block) => `
-                            ${block.inputs.array || '[]'}.map(${block.options.itemName || 'item'} => {
-                                return ${block.outputs.result || block.options.itemName || 'item'};
-                            })
-                        `
-                    }
-                }
-            },
-            async: {
-                name: "Async",
-                blocks: {
-                    fetch: {
-                        name: "Fetch API",
-                        category: "async",
-                        inputs: ["url"],
-                        outputs: ["response"],
-                        template: (block) => `
-                            fetch(${block.inputs.url || "'https://api.example.com'"})
-                                .then(response => response.json())
-                                .then(data => {
-                                    ${block.outputs.response || '// Handle response data'}
-                                })
-                                .catch(error => {
-                                    console.error('Error:', error);
-                                });
-                        `
-                    },
-                    setTimeout: {
-                        name: "Set Timeout",
-                        category: "async",
-                        inputs: ["delay"],
-                        outputs: ["callback"],
-                        template: (block) => `
-                            setTimeout(() => {
-                                ${block.outputs.callback || '// Timeout callback'}
-                            }, ${block.inputs.delay || '1000'});
-                        `
-                    }
-                }
-            }
-        };
+        // Check if external block library function exists
+        if (typeof initializeBlockLibrary === 'function') {
+            this.blockLibrary = initializeBlockLibrary();
+        } else {
+            console.error('Block library not found! Make sure block-initialization.js is loaded before ScriptFlow.');
+            // Fallback to empty library
+            this.blockLibrary = {};
+        }
     }
     
     /**
@@ -505,6 +252,8 @@ class ScriptFlow {
                 font-size: 12px;
                 margin-top: 4px;
             }
+
+            
         `;
         
         document.head.appendChild(style);
@@ -601,10 +350,9 @@ class ScriptFlow {
             this.closeModal();
         });
         
-        // Generate code button
+        // Generate code button - Use our new handler
         document.getElementById('sf-generate-btn').addEventListener('click', () => {
-            const code = this.generateCode();
-            this.options.onCodeGenerated(code);
+            this.generateCodeAction();
         });
         
         // Export code button
@@ -617,6 +365,7 @@ class ScriptFlow {
         document.getElementById('sf-clear-btn').addEventListener('click', () => {
             if (confirm('Are you sure you want to clear the canvas? This will remove all blocks and connections.')) {
                 this.clearCanvas();
+                this.showNotification('Canvas cleared', 'info');
             }
         });
         
@@ -715,6 +464,64 @@ class ScriptFlow {
             // Only deselect if clicking directly on the canvas (not on a block or other element)
             if (e.target === this.canvas) {
                 this.clearSelection();
+            }
+        });
+    }
+
+    /**
+     * Setup keyboard shortcuts for common actions
+     */
+    setupKeyboardShortcuts() {
+        document.addEventListener('keydown', (e) => {
+            // Only process if the ScriptFlow modal is active
+            if (!this.modal.classList.contains('active')) return;
+            
+            // Ctrl+S: Save flow
+            if (e.ctrlKey && e.key === 's') {
+                e.preventDefault();
+                this.saveFlow();
+            }
+            
+            // Ctrl+O: Load flow
+            if (e.ctrlKey && e.key === 'o') {
+                e.preventDefault();
+                this.loadFlow();
+            }
+            
+            // Ctrl+G: Generate code
+            if (e.ctrlKey && e.key === 'g') {
+                e.preventDefault();
+                this.generateCodeAction();
+            }
+            
+            // Delete: Delete selected block
+            if (e.key === 'Delete' && this.selectedBlockId) {
+                e.preventDefault();
+                this.deleteBlock(this.selectedBlockId);
+                this.showNotification('Block deleted', 'info');
+            }
+            
+            // Ctrl+D: Duplicate selected block
+            if (e.ctrlKey && e.key === 'd' && this.selectedBlockId) {
+                e.preventDefault();
+                this.duplicateBlock(this.selectedBlockId);
+                this.showNotification('Block duplicated', 'success');
+            }
+            
+            // Escape: Close dialogs or deselect
+            if (e.key === 'Escape') {
+                // Close code preview if open
+                const codePreview = document.getElementById('sf-code-preview-dialog');
+                if (codePreview) {
+                    codePreview.remove();
+                    return;
+                }
+                
+                // Deselect block if one is selected
+                if (this.selectedBlockId) {
+                    this.clearSelection();
+                    return;
+                }
             }
         });
     }
@@ -1623,79 +1430,173 @@ class ScriptFlow {
      * Generate JavaScript code from the current blocks and connections
      */
     generateFlowCode() {
-        let code = '';
+        // Create structures to track processed blocks and code generation state
         const processedBlocks = new Set();
+        const blockCode = new Map(); // Store generated code for each block
+        
+        // Add timeout protection
+        const startTime = Date.now();
+        const timeout = 5000; // 5 seconds timeout
+        
+        // Get entry points (blocks that should start the execution flow)
+        const entryPoints = this.blocks.filter(block => {
+            const blockTemplate = this.blockLibrary[block.category]?.blocks[block.type];
+            // Program blocks or blocks with no incoming connections are entry points
+            return (block.category === 'basics' && block.type === 'program') || 
+                   !this.connections.some(conn => conn.destBlockId === block.id);
+        });
+        
+        // If no explicit entry point, find blocks with no incoming connections
+        if (entryPoints.length === 0 && this.blocks.length > 0) {
+            entryPoints.push(...this.blocks.filter(block => 
+                !this.connections.some(conn => conn.destBlockId === block.id)
+            ));
+        }
         
         // Helper function to resolve a block's code
-        const resolveBlockCode = (blockId) => {
-            if (processedBlocks.has(blockId)) return '';
+        const resolveBlockCode = (blockId, depth = 0) => {
+            // Prevent infinite recursion
+            if (depth > 100) {
+                return '/* Maximum recursion depth exceeded */';
+            }
+            
+            // Check for timeout
+            if (Date.now() - startTime > timeout) {
+                throw new Error('Code generation timed out. You may have complex circular dependencies.');
+            }
+            
+            // Return already processed blocks
+            if (processedBlocks.has(blockId)) {
+                return blockCode.get(blockId) || '';
+            }
             
             const block = this.blocks.find(b => b.id === blockId);
             if (!block) return '';
             
-            const blockTemplate = this.blockLibrary[block.category].blocks[block.type];
+            const blockTemplate = this.blockLibrary[block.category]?.blocks[block.type];
+            if (!blockTemplate) {
+                return `/* Block template not found for ${blockId} */`;
+            }
             
-            // Resolve inputs
-            blockTemplate.inputs.forEach(input => {
-                const inputConnections = this.connections.filter(
-                    conn => conn.destBlockId === blockId && conn.destConnector === input
-                );
-                
-                if (inputConnections.length > 0) {
-                    const sourceBlockId = inputConnections[0].sourceBlockId;
-                    const sourceBlock = this.blocks.find(b => b.id === sourceBlockId);
-                    
-                    // Recursively resolve the source block
-                    block.inputs[input] = resolveBlockCode(sourceBlockId);
-                }
-            });
-            
-            // Resolve outputs
-            blockTemplate.outputs.forEach(output => {
-                const outputConnections = this.connections.filter(
-                    conn => conn.sourceBlockId === blockId && conn.sourceConnector === output
-                );
-                
-                if (outputConnections.length > 0) {
-                    const destBlockId = outputConnections[0].destBlockId;
-                    
-                    // Recursively resolve the destination block
-                    block.outputs[output] = resolveBlockCode(destBlockId);
-                }
-            });
-            
+            // Mark block as processed before resolving dependencies to prevent circular issues
             processedBlocks.add(blockId);
             
-            // Apply the template to generate code
-            return blockTemplate.template(block).trim();
+            // Initialize block inputs
+            if (!block.inputs) block.inputs = {};
+            
+            // Process input connections first to get their values
+            if (blockTemplate.inputs && Array.isArray(blockTemplate.inputs)) {
+                blockTemplate.inputs.forEach(inputName => {
+                    const connections = this.connections.filter(
+                        conn => conn.destBlockId === blockId && conn.destConnector === inputName
+                    );
+                    
+                    if (connections.length > 0) {
+                        const sourceBlockId = connections[0].sourceBlockId;
+                        // Process the source block to get its output
+                        const sourceCode = resolveBlockCode(sourceBlockId, depth + 1);
+                        block.inputs[inputName] = sourceCode;
+                    }
+                });
+            }
+            
+            // Now apply the template with resolved inputs
+            let code;
+            try {
+                if (typeof blockTemplate.template === 'function') {
+                    code = blockTemplate.template(block);
+                } else {
+                    code = `/* No template defined for ${blockTemplate.name} */`;
+                }
+            } catch (error) {
+                console.error(`Error in template for ${blockId}:`, error);
+                code = `/* Error generating code: ${error.message} */`;
+            }
+            
+            // Store the generated code
+            blockCode.set(blockId, code);
+            
+            // For blocks with a "next" output connector, find and append the next block
+            if (blockTemplate.outputs && blockTemplate.outputs.includes('next')) {
+                const nextConnections = this.connections.filter(
+                    conn => conn.sourceBlockId === blockId && conn.sourceConnector === 'next'
+                );
+                
+                if (nextConnections.length > 0) {
+                    const nextBlockId = nextConnections[0].destBlockId;
+                    if (!blockCode.has(nextBlockId)) {
+                        const nextCode = resolveBlockCode(nextBlockId, depth + 1);
+                        if (nextCode) {
+                            code += '\n' + nextCode;
+                            // Update the stored code
+                            blockCode.set(blockId, code);
+                        }
+                    }
+                }
+            }
+            
+            return code;
         };
         
-        // Start with blocks that have no incoming connections (likely entry points)
-        const entryBlocks = this.blocks.filter(block => {
-            return !this.connections.some(conn => conn.destBlockId === block.id);
+        // Start code generation from entry points
+        let finalCode = '';
+        let processedEntryPoints = new Set();
+        
+        entryPoints.forEach(entry => {
+            try {
+                if (!processedEntryPoints.has(entry.id)) {
+                    processedEntryPoints.add(entry.id);
+                    const entryCode = resolveBlockCode(entry.id);
+                    if (entryCode) {
+                        finalCode += entryCode + '\n\n';
+                    }
+                }
+            } catch (error) {
+                console.error(`Error generating code for entry block ${entry.id}:`, error);
+                finalCode += `/* Error generating entry block ${entry.id}: ${error.message} */\n\n`;
+            }
         });
         
-        // Generate code for each entry block
-        entryBlocks.forEach(block => {
-            code += resolveBlockCode(block.id) + '\n\n';
-        });
+        // If no entry points were found, generate code for all unprocessed blocks
+        if (finalCode.trim() === '' && this.blocks.length > 0) {
+            finalCode = '// No clear entry points found, generating code for all blocks\n\n';
+            this.blocks.forEach(block => {
+                if (!processedBlocks.has(block.id)) {
+                    try {
+                        finalCode += resolveBlockCode(block.id) + '\n\n';
+                    } catch (error) {
+                        console.error(`Error generating code for block ${block.id}:`, error);
+                        finalCode += `/* Error generating block ${block.id}: ${error.message} */\n\n`;
+                    }
+                }
+            });
+        }
         
-        return code.trim();
+        return finalCode.trim();
     }
     
     /**
      * Download the generated code as a JavaScript file
      */
     downloadCode(code) {
+        // Prompt for filename
+        const filename = prompt("Enter a filename for your code:", "scriptflow-code.js");
+        if (!filename) return; // User canceled
+        
+        // Add .js extension if not present
+        const finalFilename = filename.endsWith('.js') ? filename : `${filename}.js`;
+        
         const blob = new Blob([code], {type: 'text/javascript'});
         const url = URL.createObjectURL(blob);
         
         const a = document.createElement('a');
         a.href = url;
-        a.download = 'scriptflow-code.js';
+        a.download = finalFilename;
         a.click();
         
         URL.revokeObjectURL(url);
+        
+        this.showNotification(`Code downloaded as ${finalFilename}`, 'success');
     }
     
     /**
@@ -1705,7 +1606,12 @@ class ScriptFlow {
         const flowData = {
             blocks: this.blocks,
             connections: this.connections,
-            subflows: {} // Save all custom function subflows
+            subflows: {}, // Save all custom function subflows
+            metadata: {
+                version: "1.0.0",
+                createdAt: new Date().toISOString(),
+                modifiedAt: new Date().toISOString()
+            }
         };
         
         // Extract all subflows
@@ -1715,21 +1621,38 @@ class ScriptFlow {
             }
         });
         
+        // Create a dialog for saving the file with a custom name
+        const filename = prompt("Enter a name for your flow:", "scriptflow-flow.json");
+        if (!filename) return; // User canceled
+        
+        // Add .json extension if not present
+        const finalFilename = filename.endsWith('.json') ? filename : `${filename}.json`;
+        
         const blob = new Blob([JSON.stringify(flowData, null, 2)], {type: 'application/json'});
         const url = URL.createObjectURL(blob);
         
         const a = document.createElement('a');
         a.href = url;
-        a.download = 'scriptflow-flow.json';
+        a.download = finalFilename;
         a.click();
         
         URL.revokeObjectURL(url);
+        
+        // Show a notification
+        this.showNotification(`Flow saved as ${finalFilename}`, 'success');
     }
     
     /**
      * Load a flow from a JSON file
      */
     loadFlow() {
+        // Confirm if there are existing blocks
+        if (this.blocks.length > 0) {
+            if (!confirm('Loading a flow will replace your current work. Are you sure you want to continue?')) {
+                return;
+            }
+        }
+        
         const input = document.createElement('input');
         input.type = 'file';
         input.accept = '.json';
@@ -1737,6 +1660,8 @@ class ScriptFlow {
         input.onchange = e => {
             const file = e.target.files[0];
             if (!file) return;
+            
+            this.showNotification(`Loading flow: ${file.name}`, 'info');
             
             const reader = new FileReader();
             reader.onload = event => {
@@ -1787,6 +1712,13 @@ class ScriptFlow {
                         }
                         
                         const blockEl = this.createBlockElement(block);
+    
+                        // Set size if previously saved
+                        if (block.width && block.height) {
+                            blockEl.style.width = `${block.width}px`;
+                            blockEl.style.height = `${block.height}px`;
+                        }
+                        
                         this.canvas.appendChild(blockEl);
                     });
                     
@@ -1795,9 +1727,11 @@ class ScriptFlow {
                         this.renderConnection(connection);
                     });
                     
+                    this.showNotification(`Flow loaded successfully`, 'success');
+                    
                 } catch (err) {
                     console.error('Error loading flow:', err);
-                    alert('Error loading flow: ' + err.message);
+                    this.showNotification(`Error loading flow: ${err.message}`, 'error');
                 }
             };
             
@@ -1805,6 +1739,284 @@ class ScriptFlow {
         };
         
         input.click();
+    }
+
+    /**
+     * Generate code button handler
+     */
+    generateCodeAction() {
+        const code = this.generateCode();
+        
+        // Create and show code preview dialog
+        this.showCodePreviewDialog(code);
+        
+        // Also pass to callback
+        this.options.onCodeGenerated(code);
+    }
+
+    /**
+     * Show code preview dialog
+     */
+    showCodePreviewDialog(code) {
+        // Create dialog if it doesn't exist
+        const existingDialog = document.getElementById('sf-code-preview-dialog');
+        if (existingDialog) {
+            existingDialog.remove();
+        }
+        
+        const dialog = document.createElement('div');
+        dialog.id = 'sf-code-preview-dialog';
+        dialog.className = `sf-dialog sf-theme-${this.options.theme}`;
+        
+        // Add dialog content
+        dialog.innerHTML = `
+            <div class="sf-dialog-header">
+                <h3>Generated JavaScript Code</h3>
+                <button class="sf-button sf-icon-button" id="sf-close-preview">×</button>
+            </div>
+            <div class="sf-dialog-content">
+                <pre id="sf-code-preview"><code>${this.escapeHtml(code)}</code></pre>
+            </div>
+            <div class="sf-dialog-footer">
+                <button class="sf-button" id="sf-copy-code">Copy to Clipboard</button>
+                <button class="sf-button primary" id="sf-download-code">Download as File</button>
+            </div>
+        `;
+        
+        document.body.appendChild(dialog);
+        
+        // Add event listeners
+        document.getElementById('sf-close-preview').addEventListener('click', () => {
+            dialog.remove();
+        });
+        
+        document.getElementById('sf-copy-code').addEventListener('click', () => {
+            navigator.clipboard.writeText(code)
+                .then(() => {
+                    this.showNotification('Code copied to clipboard', 'success');
+                })
+                .catch(err => {
+                    this.showNotification('Failed to copy code', 'error');
+                    console.error('Failed to copy code:', err);
+                });
+        });
+        
+        document.getElementById('sf-download-code').addEventListener('click', () => {
+            this.downloadCode(code);
+        });
+        
+        // Add styles for the dialog
+        const style = document.createElement('style');
+        style.textContent = `
+            .sf-dialog {
+                position: fixed;
+                top: 50%;
+                left: 50%;
+                transform: translate(-50%, -50%);
+                width: 80%;
+                max-width: 900px;
+                max-height: 80vh;
+                background-color: #252526;
+                border-radius: 8px;
+                box-shadow: 0 5px 20px rgba(0, 0, 0, 0.3);
+                z-index: 10000;
+                display: flex;
+                flex-direction: column;
+                overflow: hidden;
+            }
+            
+            .sf-dialog-header {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                padding: 12px 16px;
+                border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            }
+            
+            .sf-dialog-header h3 {
+                margin: 0;
+                font-size: 18px;
+                color: #e0e0e0;
+            }
+            
+            .sf-dialog-content {
+                padding: 0;
+                overflow: auto;
+                flex: 1;
+            }
+            
+            #sf-code-preview {
+                margin: 0;
+                padding: 16px;
+                overflow: auto;
+                background-color: #1e1e1e;
+                color: #d4d4d4;
+                font-family: Consolas, Monaco, 'Andale Mono', monospace;
+                font-size: 14px;
+                line-height: 1.5;
+                white-space: pre;
+                max-height: 60vh;
+            }
+            
+            .sf-dialog-footer {
+                display: flex;
+                justify-content: flex-end;
+                padding: 12px 16px;
+                border-top: 1px solid rgba(255, 255, 255, 0.1);
+                gap: 8px;
+            }
+            
+            .sf-theme-light .sf-dialog {
+                background-color: #f0f0f0;
+                box-shadow: 0 5px 20px rgba(0, 0, 0, 0.2);
+            }
+            
+            .sf-theme-light .sf-dialog-header {
+                border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+            }
+            
+            .sf-theme-light .sf-dialog-header h3 {
+                color: #333;
+            }
+            
+            .sf-theme-light #sf-code-preview {
+                background-color: #ffffff;
+                color: #333;
+                border: 1px solid #ddd;
+            }
+            
+            .sf-theme-light .sf-dialog-footer {
+                border-top: 1px solid rgba(0, 0, 0, 0.1);
+            }
+        `;
+        
+        document.head.appendChild(style);
+    }
+
+    /**
+     * Show a notification message
+     * @param {string} message - Message text
+     * @param {string} type - 'success', 'error', 'info'
+     */
+    showNotification(message, type = 'info') {
+        // Check if notification container exists
+        let container = document.getElementById('sf-notification-container');
+        if (!container) {
+            container = document.createElement('div');
+            container.id = 'sf-notification-container';
+            container.style.position = 'fixed';
+            container.style.bottom = '20px';
+            container.style.right = '20px';
+            container.style.zIndex = '10000';
+            document.body.appendChild(container);
+        }
+        
+        // Create notification element
+        const notification = document.createElement('div');
+        notification.className = `sf-notification sf-notification-${type}`;
+        
+        // Add icon based on type
+        let icon = '';
+        switch (type) {
+            case 'success':
+                icon = '✓';
+                break;
+            case 'error':
+                icon = '✗';
+                break;
+            case 'info':
+            default:
+                icon = 'ℹ';
+                break;
+        }
+        
+        notification.innerHTML = `
+            <span class="sf-notification-icon">${icon}</span>
+            <span class="sf-notification-message">${message}</span>
+        `;
+        
+        // Add to container
+        container.appendChild(notification);
+        
+        // Auto-remove after delay
+        setTimeout(() => {
+            notification.classList.add('sf-notification-hide');
+            setTimeout(() => {
+                notification.remove();
+            }, 300);
+        }, 4000);
+        
+        // Add styles if not already added
+        if (!document.getElementById('sf-notification-styles')) {
+            const style = document.createElement('style');
+            style.id = 'sf-notification-styles';
+            style.textContent = `
+                .sf-notification {
+                    background-color: rgba(42, 42, 42, 0.9);
+                    color: white;
+                    padding: 12px 16px;
+                    margin-bottom: 10px;
+                    border-radius: 6px;
+                    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.2);
+                    display: flex;
+                    align-items: center;
+                    min-width: 250px;
+                    max-width: 400px;
+                    transition: opacity 0.3s, transform 0.3s;
+                    opacity: 1;
+                    transform: translateX(0);
+                }
+                
+                .sf-notification-hide {
+                    opacity: 0;
+                    transform: translateX(50px);
+                }
+                
+                .sf-notification-icon {
+                    margin-right: 12px;
+                    font-size: 18px;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    width: 24px;
+                    height: 24px;
+                    border-radius: 50%;
+                }
+                
+                .sf-notification-success .sf-notification-icon {
+                    background-color: rgba(39, 174, 96, 0.2);
+                    color: #2ecc71;
+                }
+                
+                .sf-notification-error .sf-notification-icon {
+                    background-color: rgba(231, 76, 60, 0.2);
+                    color: #e74c3c;
+                }
+                
+                .sf-notification-info .sf-notification-icon {
+                    background-color: rgba(52, 152, 219, 0.2);
+                    color: #3498db;
+                }
+                
+                .sf-notification-message {
+                    flex: 1;
+                    font-size: 14px;
+                }
+            `;
+            document.head.appendChild(style);
+        }
+    }
+
+    /**
+     * Escape HTML special characters to prevent XSS in the code preview
+     */
+    escapeHtml(text) {
+        return text
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;")
+            .replace(/'/g, "&#039;");
     }
     
     /**
@@ -1913,12 +2125,24 @@ class ScriptFlow {
         const x = (e.clientX - canvasRect.left) / this.canvasScale - this.dragOffsetX;
         const y = (e.clientY - canvasRect.top) / this.canvasScale - this.dragOffsetY;
         
+        // Set default size for blocks based on category
+        let defaultWidth = 200;
+        let defaultHeight = 120;
+        
+        // Make input blocks smaller by default
+        if (categoryKey === 'inputs') {
+            defaultWidth = 130;
+            defaultHeight = 90;
+        }
+        
         this.draggedBlock = {
             id: blockId,
             type: blockKey,
             category: categoryKey,
             x: x,
             y: y,
+            width: defaultWidth,
+            height: defaultHeight,
             inputs: {},
             outputs: {},
             options: {}
@@ -1933,6 +2157,11 @@ class ScriptFlow {
         
         // Create the visual representation
         const blockEl = this.createBlockElement(this.draggedBlock);
+        
+        // Set initial size
+        blockEl.style.width = `${defaultWidth}px`;
+        blockEl.style.height = `${defaultHeight}px`;
+        
         this.canvas.appendChild(blockEl);
         
         // Add to blocks collection
@@ -1944,51 +2173,127 @@ class ScriptFlow {
      */
     createBlockElement(block) {
         const blockTemplate = this.blockLibrary[block.category].blocks[block.type];
+    
+        // Calculate block height at the start of the function
+        const numConnectors = Math.max(
+            blockTemplate.inputs ? blockTemplate.inputs.length : 0,
+            blockTemplate.outputs ? blockTemplate.outputs.length : 0
+        );
+    
+        const minContentHeight = 60; // Base content height
+        const connectorSpacing = 30; // Spacing between connectors
+        const totalConnectorHeight = numConnectors * connectorSpacing;
+        const blockHeight = Math.max(minContentHeight, totalConnectorHeight + 20); // Add padding    
         
         const blockEl = document.createElement('div');
         blockEl.className = `sf-block ${block.category} sf-glass-effect`;
         blockEl.id = `block-${block.id}`;
         blockEl.style.left = `${block.x}px`;
         blockEl.style.top = `${block.y}px`;
+
+        // Add event listener for dragging the block
+        blockEl.addEventListener('mousedown', (e) => {
+            // Only allow dragging with left mouse button and not on resize handle
+            if (e.button !== 0 || e.target.classList.contains('sf-resize-handle')) {
+                return;
+            }
+            
+            // Prevent if clicked on an input or select element
+            if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') {
+                return;
+            }
+            
+            this.startExistingBlockDrag(e, block.id);
+        });
         
-        // Create block content
-        let blockContent = `
-            <div class="sf-block-title">${blockTemplate.name}</div>
-            <div class="sf-block-content">
-        `;
+        // Create block content with proper structure
+        const blockTitle = document.createElement('div');
+        blockTitle.className = 'sf-block-title';
+        blockTitle.textContent = blockTemplate.name;
+        blockEl.appendChild(blockTitle);
+    
+        // Create a central content area with proper padding to avoid connector overlap
+        const blockContent = document.createElement('div');
+        blockContent.className = 'sf-block-content';
+        blockContent.style.margin = '0 48px'; // Add horizontal margin to avoid overlapping connectors
+        blockContent.style.padding = '5px 10px'; // Add padding inside the content area
+
+        // Add a dedicated resize handle element
+        const resizeHandle = document.createElement('div');
+        resizeHandle.className = 'sf-resize-handle';
+        resizeHandle.innerHTML = '<svg width="10" height="10" viewBox="0 0 10 10"><path d="M 1,9 L 9,1 M 5,9 L 9,5 M 9,9 L 9,9" stroke="rgba(255,255,255,0.7)" stroke-width="1"/></svg>';
+        blockEl.appendChild(resizeHandle);
         
         // Add options UI if any
         if (blockTemplate.options && blockTemplate.options.length > 0) {
             blockTemplate.options.forEach(option => {
+                const optionContainer = document.createElement('div');
+                optionContainer.className = 'sf-option-container';
+                
+                const label = document.createElement('label');
+                label.textContent = `${option.name}: `;
+                optionContainer.appendChild(label);
+                
                 if (option.type === 'select') {
-                    blockContent += `<div><label>${option.name}: </label><select data-option="${option.name}">`;
+                    const select = document.createElement('select');
+                    select.dataset.option = option.name;
+                    
                     option.options.forEach(optValue => {
-                        const selected = block.options[option.name] === optValue ? 'selected' : '';
-                        blockContent += `<option value="${optValue}" ${selected}>${optValue}</option>`;
+                        const optEl = document.createElement('option');
+                        optEl.value = optValue;
+                        optEl.textContent = optValue;
+                        if (block.options[option.name] === optValue) {
+                            optEl.selected = true;
+                        }
+                        select.appendChild(optEl);
                     });
-                    blockContent += `</select></div>`;
+                    
+                    // Stop propagation to prevent dragging when interacting with options
+                    select.addEventListener('mousedown', (e) => {
+                        e.stopPropagation();
+                    });
+                    
+                    select.addEventListener('change', (e) => {
+                        block.options[option.name] = e.target.value;
+                    });
+                    
+                    optionContainer.appendChild(select);
                 } else {
-                    blockContent += `
-                        <div>
-                            <label>${option.name}: </label>
-                            <input type="${option.type}" data-option="${option.name}" value="${block.options[option.name] || ''}">
-                        </div>
-                    `;
+                    const input = document.createElement('input');
+                    input.type = option.type;
+                    input.dataset.option = option.name;
+                    input.value = block.options[option.name] || '';
+                    
+                    // Stop propagation to prevent dragging when interacting with options
+                    input.addEventListener('mousedown', (e) => {
+                        e.stopPropagation();
+                    });
+                    
+                    input.addEventListener('change', (e) => {
+                        block.options[option.name] = e.target.value;
+                    });
+                    
+                    optionContainer.appendChild(input);
                 }
+                
+                blockContent.appendChild(optionContainer);
             });
         }
         
-        blockContent += `</div>`;
-        blockEl.innerHTML = blockContent;
+        blockEl.appendChild(blockContent);
         
         // Add input connectors with labels
         if (blockTemplate.inputs && blockTemplate.inputs.length > 0) {
+            const inputCount = blockTemplate.inputs.length;
+            const spacing = blockHeight / (inputCount + 1);
+            
             blockTemplate.inputs.forEach((input, index) => {
                 const connectorContainer = document.createElement('div');
                 connectorContainer.className = 'sf-connector-container input';
-                connectorContainer.style.top = `${25 + (index * 20)}px`;
+                connectorContainer.style.top = `${spacing * (index + 1)}px`; // Evenly space connectors
+                connectorContainer.style.zIndex = '10'; // Ensure connectors are above other elements
                 
-                // Add connector point first (visual indicator)
+                // Add connector point
                 const connectorHitbox = document.createElement('div');
                 connectorHitbox.className = 'sf-connector-hitbox input';
                 
@@ -2004,12 +2309,12 @@ class ScriptFlow {
                     this.startConnectionDrag(e, block.id, 'input', input);
                 });
                 
-                // Add connector label after the connector point
+                // Add connector label
                 const label = document.createElement('div');
                 label.className = 'sf-connector-label input';
                 label.textContent = input;
                 
-                // Append in correct order for input: connector followed by label
+                // Append in correct order
                 connectorContainer.appendChild(connectorHitbox);
                 connectorContainer.appendChild(label);
                 
@@ -2017,19 +2322,18 @@ class ScriptFlow {
             });
         }
         
-        // Add output connectors with labels - FIXED POSITIONING
+        // Add output connectors with labels
         if (blockTemplate.outputs && blockTemplate.outputs.length > 0) {
+            const outputCount = blockTemplate.outputs.length;
+            const spacing = blockHeight / (outputCount + 1);
+            
             blockTemplate.outputs.forEach((output, index) => {
                 const connectorContainer = document.createElement('div');
                 connectorContainer.className = 'sf-connector-container output';
-                connectorContainer.style.top = `${25 + (index * 20)}px`;
+                connectorContainer.style.top = `${spacing * (index + 1)}px`; // Evenly space connectors
+                connectorContainer.style.zIndex = '10'; // Ensure connectors are above other elements
                 
-                // Add connector label first
-                const label = document.createElement('div');
-                label.className = 'sf-connector-label output';
-                label.textContent = output;
-                
-                // Add connector point after the label
+                // Add connector point
                 const connectorHitbox = document.createElement('div');
                 connectorHitbox.className = 'sf-connector-hitbox output';
                 
@@ -2045,31 +2349,149 @@ class ScriptFlow {
                     this.startConnectionDrag(e, block.id, 'output', output);
                 });
                 
-                // Append in correct order for output: label followed by connector
+                // Add connector label
+                const label = document.createElement('div');
+                label.className = 'sf-connector-label output';
+                label.textContent = output;
+                
+                // Append in correct order
                 connectorContainer.appendChild(label);
                 connectorContainer.appendChild(connectorHitbox);
                 
                 blockEl.appendChild(connectorContainer);
             });
         }
+    
+        // Set minimum height for the block
+        blockEl.style.minHeight = `${blockHeight}px`;
         
         // Make the block draggable and selectable
-        blockEl.addEventListener('mousedown', (e) => {
-            if (e.target === blockEl || e.target.classList.contains('sf-block-title') || e.target.classList.contains('sf-block-content')) {
-                this.startExistingBlockDrag(e, block.id);
+        resizeHandle.addEventListener('mousedown', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            this.isResizing = true;
+            this.resizingBlock = block;
+            
+            const startX = e.clientX;
+            const startY = e.clientY;
+            const startWidth = blockEl.offsetWidth;
+            const startHeight = blockEl.offsetHeight;
+            
+            const onMouseMove = (e) => {
+                if (!this.isResizing) return;
                 
-                // Select this block
-                this.selectBlock(block.id);
+                const dx = e.clientX - startX;
+                const dy = e.clientY - startY;
+                
+                // Calculate new dimensions with minimum size constraints
+                const newWidth = Math.max(150, startWidth + dx);
+                const newHeight = Math.max(90, startHeight + dy);
+                
+                blockEl.style.width = `${newWidth}px`;
+                blockEl.style.height = `${newHeight}px`;
+                
+                // Update connections while resizing
+                this.updateConnections(block.id);
+            };
+            
+            const onMouseUp = () => {
+                if (this.isResizing) {
+                    // Save the new size to block data
+                    const style = window.getComputedStyle(blockEl);
+                    block.width = parseInt(style.width);
+                    block.height = parseInt(style.height);
+                    
+                    this.isResizing = false;
+                    this.resizingBlock = null;
+                    
+                    // Update connections one final time
+                    this.updateConnections(block.id);
+                }
+                
+                document.removeEventListener('mousemove', onMouseMove);
+                document.removeEventListener('mouseup', onMouseUp);
+            };
+            
+            document.addEventListener('mousemove', onMouseMove);
+            document.addEventListener('mouseup', onMouseUp);
+        });
+
+        // Make the block resizable
+        blockEl.addEventListener('mouseup', (e) => {
+            // After resizing, update connections since connector positions may have changed
+            if (e.target === blockEl || e.target.closest('.sf-block') === blockEl) {
+                this.updateConnections(block.id);
+                
+                // Save the new size to block data
+                const style = window.getComputedStyle(blockEl);
+                block.width = parseInt(style.width);
+                block.height = parseInt(style.height);
             }
         });
-        
-        // Add event listeners to option inputs
-        blockEl.querySelectorAll('[data-option]').forEach(input => {
-            input.addEventListener('change', (e) => {
-                const option = e.target.dataset.option;
-                block.options[option] = e.target.value;
-            });
+
+        // Adjust connector positions based on block height
+        const adjustConnectorPositions = () => {
+            // Update input connectors
+            if (blockTemplate.inputs && blockTemplate.inputs.length > 0) {
+                const inputCount = blockTemplate.inputs.length;
+                const inputContainers = blockEl.querySelectorAll('.sf-connector-container.input');
+                
+                inputContainers.forEach((container, index) => {
+                    const blockHeight = blockEl.offsetHeight;
+                    const spacing = blockHeight / (inputCount + 1);
+                    container.style.top = `${spacing * (index + 1)}px`;
+                });
+            }
+            
+            // Update output connectors
+            if (blockTemplate.outputs && blockTemplate.outputs.length > 0) {
+                const outputCount = blockTemplate.outputs.length;
+                const outputContainers = blockEl.querySelectorAll('.sf-connector-container.output');
+                
+                outputContainers.forEach((container, index) => {
+                    const blockHeight = blockEl.offsetHeight;
+                    const spacing = blockHeight / (outputCount + 1);
+                    container.style.top = `${spacing * (index + 1)}px`;
+                });
+            }
+        };
+
+        // Add resize observer to keep connectors properly positioned
+        const resizeObserver = new ResizeObserver(() => {
+            adjustConnectorPositions();
+            this.updateConnections(block.id);
         });
+
+        resizeObserver.observe(blockEl);
+
+        // Set initial size if previously saved
+        if (block.width && block.height) {
+            blockEl.style.width = `${block.width}px`;
+            blockEl.style.height = `${block.height}px`;
+        }
+        
+        // Add additional style to prevent connector and option interference
+        const additionalStyle = document.createElement('style');
+        additionalStyle.textContent = `
+            #block-${block.id} .sf-option-container {
+                pointer-events: auto;
+                position: relative;
+                z-index: 5;
+            }
+            
+            #block-${block.id} .sf-option-container input,
+            #block-${block.id} .sf-option-container select {
+                pointer-events: auto;
+                position: relative;
+                z-index: 5;
+            }
+            
+            #block-${block.id} .sf-connector-hitbox {
+                z-index: 10;
+            }
+        `;
+        document.head.appendChild(additionalStyle);
         
         return blockEl;
     }
@@ -2154,6 +2576,11 @@ class ScriptFlow {
      * Close the ScriptFlow modal dialog
      */
     closeModal() {
+        if (this.blocks.length > 0) {
+            if (!confirm('Are you sure you want to close the editor? Any unsaved changes will be lost.')) {
+                return;
+            }
+        }
         this.modal.classList.remove('active');
     }
 
@@ -2168,19 +2595,22 @@ class ScriptFlow {
      * Handle mouse move on canvas
      */
     onCanvasMouseMove(e) {
-        if (this.draggedBlock) {
+        // Only handle dragging if not currently resizing
+        if (this.draggedBlock && !this.isResizing) {
             const canvasRect = this.canvas.getBoundingClientRect();
-            // Apply proper scaling and offset calculations
-            const x = (e.clientX - canvasRect.left) / this.canvasScale - this.dragOffsetX;
-            const y = (e.clientY - canvasRect.top) / this.canvasScale - this.dragOffsetY;
             
-            this.draggedBlock.x = x;
-            this.draggedBlock.y = y;
+            // Apply proper scaling and offset calculations
+            const x = (e.clientX - canvasRect.left) / this.canvasScale - this.canvasOffsetX;
+            const y = (e.clientY - canvasRect.top) / this.canvasScale - this.canvasOffsetY;
+            
+            // Update block position
+            this.draggedBlock.x = x - this.dragOffsetX + this.canvasOffsetX;
+            this.draggedBlock.y = y - this.dragOffsetY + this.canvasOffsetY;
             
             const blockEl = document.getElementById(`block-${this.draggedBlock.id}`);
             if (blockEl) {
-                blockEl.style.left = `${x}px`;
-                blockEl.style.top = `${y}px`;
+                blockEl.style.left = `${this.draggedBlock.x}px`;
+                blockEl.style.top = `${this.draggedBlock.y}px`;
                 
                 // Update connections for this block
                 this.updateConnections(this.draggedBlock.id);
@@ -2197,6 +2627,11 @@ class ScriptFlow {
      */
     onCanvasMouseUp(e) {
         if (this.draggedBlock) {
+            const blockEl = document.getElementById(`block-${this.draggedBlock.id}`);
+            if (blockEl) {
+                blockEl.style.cursor = '';
+            }
+            document.body.style.cursor = '';
             this.draggedBlock = null;
         }
         
@@ -2218,6 +2653,8 @@ class ScriptFlow {
         e.preventDefault();
         e.stopPropagation();
         
+        if (this.isResizing) return; // Don't start drag during resize
+        
         const blockEl = document.getElementById(`block-${blockId}`);
         if (!blockEl) return;
         
@@ -2236,6 +2673,10 @@ class ScriptFlow {
         if (this.selectedBlockId !== blockId) {
             this.selectBlock(blockId);
         }
+        
+        // Set cursor to grabbing during drag
+        document.body.style.cursor = 'grabbing';
+        blockEl.style.cursor = 'grabbing';
     }
 
     /**

@@ -1,0 +1,259 @@
+/* ScriptFlow Block Styling */
+
+/* Common block styling - add resize handle and min size */
+.sf-block {
+  position: absolute;
+  min-width: 150px;  /* Reduced from 200px */
+  min-height: 90px;  /* Minimum height for blocks */
+  max-width: none;   /* Remove max-width to allow resizing */
+  padding: 12px 15px;
+  border-radius: 8px;
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  transition: transform 0.15s, box-shadow 0.2s;
+  resize: none;      /* Disable default resize */
+  overflow: visible;  /* Show connectors */
+}
+
+/* Fix connector visibility and input options overlap */
+
+/* Improve the resize handle styling */
+.sf-resize-handle {
+  position: absolute;
+  bottom: 3px;
+  right: 3px;
+  width: 15px;
+  height: 15px;
+  cursor: nwse-resize;
+  z-index: 20;
+  opacity: 0.6;
+  transition: opacity 0.2s;
+}
+
+.sf-resize-handle:hover {
+  opacity: 1;
+}
+
+/* Remove the default resize handle indicator */
+.sf-block::after {
+  display: none;
+}
+
+/* Position connector containers further into the block */
+.sf-connector-container {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  height: 20px;
+}
+
+.sf-connector-container.input {
+  left: -12px; /* Move connectors further outward */
+  flex-direction: row;
+}
+
+.sf-connector-container.output {
+  right: -12px; /* Move connectors further outward */
+  flex-direction: row-reverse;
+}
+
+/* Ensure connector hitboxes are visible */
+.sf-connector-hitbox {
+  width: 24px;
+  height: 24px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  cursor: crosshair;
+  position: relative;
+  z-index: 15;
+}
+
+/* Make connectors more visible */
+.sf-connector {
+  width: 12px; /* Slightly larger */
+  height: 12px;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.9); /* More visible border */
+  box-shadow: 0 0 5px rgba(100, 100, 100, 0.5);
+  cursor: crosshair;
+  transition: transform 0.2s, box-shadow 0.2s;
+  background-color: rgba(255, 255, 255, 0.2); /* Slightly visible background */
+}
+
+/* Enhance connector visibility on input side */
+.sf-connector.input {
+  background-color: rgba(52, 152, 219, 0.8);
+  box-shadow: 0 0 5px rgba(52, 152, 219, 0.5);
+}
+
+/* Enhance connector visibility on output side */
+.sf-connector.output {
+  background-color: rgba(46, 204, 113, 0.8);
+  box-shadow: 0 0 5px rgba(46, 204, 113, 0.5);
+}
+
+/* Fix block content margin to avoid overlapping with connectors */
+.sf-block-content {
+  padding: 5px 8px;
+  margin: 0 24px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  max-height: calc(100% - 30px);
+  box-sizing: border-box;
+}
+
+/* Style option containers */
+.sf-option-container {
+  margin: 4px 0;
+  padding: 3px 0;
+}
+
+.sf-option-container label {
+  display: block;
+  font-size: 12px;
+  margin-bottom: 2px;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.sf-option-container input,
+.sf-option-container select {
+  width: 100%;
+  background-color: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  color: rgba(255, 255, 255, 0.9);
+  padding: 4px 6px;
+  border-radius: 3px;
+  font-size: 12px;
+}
+
+/* Ensure blocks can be dragged */
+.sf-block {
+  user-select: none;
+  cursor: move;
+}
+
+/* Style block title */
+.sf-block-title {
+  font-size: 13px;
+  font-weight: bold;
+  text-align: center;
+  padding: 5px 0;
+  margin-bottom: 5px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+  user-select: none;
+}
+
+/* Input styling inside blocks */
+.sf-block input, 
+.sf-block select {
+  background-color: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  color: rgba(255, 255, 255, 0.9);
+  padding: 4px 8px;
+  border-radius: 3px;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  margin: 2px 0;
+}
+
+.sf-block input:focus, 
+.sf-block select:focus {
+  outline: none;
+  border-color: rgba(255, 255, 255, 0.6);
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.2);
+}
+
+.sf-block label {
+  display: block;
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 12px;
+  margin-top: 4px;
+}
+
+/* Connector container and labels */
+.sf-connector-container {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  height: 20px;
+}
+
+/* Make the connector labels scale with block size */
+.sf-connector-label {
+  font-size: 11px;
+  max-width: 60px; /* Reduced width to prevent overflow */
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  padding: 0 3px;
+  pointer-events: none; /* Prevent blocking connector hitbox */
+}
+
+/* Expand connector labels on hover */
+.sf-block:hover .sf-connector-label {
+  max-width: 120px;
+}
+
+/* Add compact input styles for input blocks */
+
+/* Compact option containers */
+.sf-block.inputs .sf-option-container {
+    margin: 3px 0;
+  }
+  
+  /* Make all input blocks more compact */
+  .sf-block.inputs,
+  .sf-block.text,
+  .sf-block.number,
+  .sf-block.boolean,
+  .sf-block.string {
+    min-width: 120px;
+    padding: 8px 10px;
+  }
+  
+  /* Make compact titles */
+  .sf-block.inputs .sf-block-title {
+    font-size: 12px;
+    padding-bottom: 4px;
+    margin-bottom: 5px;
+  }
+  
+  /* Make connector labels more visible on compact blocks */
+  .sf-block.inputs .sf-connector-label {
+    font-size: 10px;
+    font-weight: bold;
+  }
+  
+  /* Style for compact input fields */
+  .sf-block.inputs .sf-block-content {
+    margin: 0 18px; /* Even smaller margins for input blocks */
+  }
+  
+  /* Add some vertical spacing between elements */
+  .sf-option-container {
+    margin-bottom: 6px;
+  }
+  
+  /* Make number inputs more compact */
+  input[type="number"] {
+    width: 100%;
+    text-align: right;
+  }
+  
+  /* Improve the scaling behavior of blocks */
+  @media (max-width: 768px) {
+    .sf-block {
+      min-width: 120px;
+    }
+    
+    .sf-block-content {
+      margin: 0 25px;
+    }
+    
+    .sf-connector-label {
+      font-size: 10px;
+      max-width: 60px;
+    }
+  }
