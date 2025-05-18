@@ -1,0 +1,1513 @@
+/* ScriptFlow Main Styles */
+
+/* Variables for theming */
+.sf-theme-dark {
+    --sf-bg-color: #1e1e1e;
+    --sf-primary-color: #3498db;
+    --sf-secondary-color: #2c3e50;
+    --sf-text-color: #f8f9fa;
+    --sf-panel-bg: #2d2d2d;
+    --sf-panel-header: #252526;
+    --sf-panel-border: #3c3c3c;
+    --sf-canvas-bg: #252526;
+    --sf-canvas-grid: #333;
+    --sf-block-bg: #2d2d2d;
+    --sf-block-border: #3c3c3c;
+    --sf-connector-color: #e74c3c;
+    --sf-success-color: #2ecc71;
+    --sf-danger-color: #e74c3c;
+    --sf-warning-color: #f39c12;
+    --sf-neutral-color: #7f8c8d;
+    --sf-hover-bg: rgba(255, 255, 255, 0.1);
+    --sf-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+}
+
+.sf-theme-light {
+    --sf-bg-color: #f5f5f5;
+    --sf-primary-color: #3498db;
+    --sf-secondary-color: #2c3e50;
+    --sf-text-color: #333;
+    --sf-panel-bg: #ffffff;
+    --sf-panel-header: #f8f9fa;
+    --sf-panel-border: #ddd;
+    --sf-canvas-bg: #ffffff;
+    --sf-canvas-grid: #eee;
+    --sf-block-bg: #f8f9fa;
+    --sf-block-border: #ddd;
+    --sf-connector-color: #e74c3c;
+    --sf-success-color: #2ecc71;
+    --sf-danger-color: #e74c3c;
+    --sf-warning-color: #f39c12;
+    --sf-neutral-color: #95a5a6;
+    --sf-hover-bg: rgba(0, 0, 0, 0.05);
+    --sf-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.sf-theme-blue {
+    --sf-bg-color: #1a2b3c;
+    --sf-primary-color: #3498db;
+    --sf-secondary-color: #2c3e50;
+    --sf-text-color: #ecf0f1;
+    --sf-panel-bg: #2c3e50;
+    --sf-panel-header: #243342;
+    --sf-panel-border: #34495e;
+    --sf-canvas-bg: #2c3e50;
+    --sf-canvas-grid: #34495e;
+    --sf-block-bg: #34495e;
+    --sf-block-border: #2c3e50;
+    --sf-connector-color: #e74c3c;
+    --sf-success-color: #2ecc71;
+    --sf-danger-color: #e74c3c;
+    --sf-warning-color: #f39c12;
+    --sf-neutral-color: #7f8c8d;
+    --sf-hover-bg: rgba(255, 255, 255, 0.1);
+    --sf-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+}
+
+.sf-theme-green {
+    --sf-bg-color: #1a2e1a;
+    --sf-primary-color: #2ecc71;
+    --sf-secondary-color: #27ae60;
+    --sf-text-color: #ecf0f1;
+    --sf-panel-bg: #27ae60;
+    --sf-panel-header: #219653;
+    --sf-panel-border: #2ecc71;
+    --sf-canvas-bg: #27ae60;
+    --sf-canvas-grid: #2ecc71;
+    --sf-block-bg: #2ecc71;
+    --sf-block-border: #27ae60;
+    --sf-connector-color: #e74c3c;
+    --sf-success-color: #1abc9c;
+    --sf-danger-color: #e74c3c;
+    --sf-warning-color: #f39c12;
+    --sf-neutral-color: #7f8c8d;
+    --sf-hover-bg: rgba(255, 255, 255, 0.1);
+    --sf-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+}
+
+.sf-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.7);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    pointer-events: none;
+    color: var(--sf-text-color);
+}
+
+.sf-modal.active {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.sf-editor {
+    display: grid;
+    grid-template-columns: 250px 1fr 300px;
+    grid-template-rows: auto 1fr auto;
+    width: 95%;
+    height: 95%;
+    max-width: 1800px;
+    background-color: var(--sf-bg-color);
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: var(--sf-shadow);
+}
+
+.sf-header {
+    grid-column: 1 / 4;
+    background-color: var(--sf-panel-header);
+    color: var(--sf-text-color);
+    padding: 15px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid var(--sf-panel-border);
+}
+
+.sf-header-left {
+    display: flex;
+    align-items: center;
+}
+
+.sf-header-left h2 {
+    margin: 0;
+    margin-right: 20px;
+}
+
+.sf-breadcrumb {
+    display: flex;
+    align-items: center;
+    font-size: 14px;
+}
+
+.sf-breadcrumb-item {
+    cursor: pointer;
+    padding: 2px 4px;
+    border-radius: 3px;
+}
+
+.sf-breadcrumb-item:hover {
+    background-color: var(--sf-hover-bg);
+}
+
+.sf-breadcrumb-separator {
+    margin: 0 6px;
+    color: var(--sf-neutral-color);
+}
+
+.sf-header-center {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.sf-header-right {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.sf-theme-select {
+    background-color: var(--sf-panel-bg);
+    color: var(--sf-text-color);
+    border: 1px solid var(--sf-panel-border);
+    border-radius: 4px;
+    padding: 5px;
+}
+
+.sf-palette {
+    grid-column: 1;
+    grid-row: 2;
+    background-color: var(--sf-panel-bg);
+    border-right: 1px solid var(--sf-panel-border);
+    padding: 10px;
+    overflow-y: auto;
+}
+
+.sf-canvas-container {
+    grid-column: 2;
+    grid-row: 2;
+    background-color: var(--sf-canvas-bg);
+    position: relative;
+    overflow: hidden;
+}
+
+.sf-canvas {
+    background-color: var(--sf-canvas-bg);
+    background-image: 
+        linear-gradient(var(--sf-canvas-grid) 1px, transparent 1px),
+        linear-gradient(90deg, var(--sf-canvas-grid) 1px, transparent 1px);
+    background-size: 20px 20px;
+    position: absolute;
+    width: 5000px;
+    height: 5000px;
+    transform-origin: 0 0;
+    will-change: transform;
+}
+
+.sf-property-panel {
+    grid-column: 3;
+    grid-row: 2;
+    background-color: var(--sf-panel-bg);
+    border-left: 1px solid var(--sf-panel-border);
+    padding: 0;
+    display: none;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.sf-property-panel.active {
+    display: flex;
+}
+
+.sf-property-panel-header {
+    background-color: var(--sf-panel-header);
+    padding: 10px 15px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid var(--sf-panel-border);
+}
+
+.sf-property-panel-header h3 {
+    margin: 0;
+}
+
+.sf-property-panel-content {
+    flex: 1;
+    padding: 15px;
+    overflow-y: auto;
+}
+
+.sf-property-group {
+    margin-bottom: 20px;
+    background-color: var(--sf-bg-color);
+    padding: 10px;
+    border-radius: 4px;
+}
+
+.sf-property-group h5 {
+    margin-top: 0;
+    margin-bottom: 10px;
+    color: var(--sf-primary-color);
+    border-bottom: 1px solid var(--sf-panel-border);
+    padding-bottom: 5px;
+}
+
+.sf-property-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+}
+
+.sf-property-row label {
+    flex: 0 0 80px;
+}
+
+.sf-property-row input, 
+.sf-property-row select {
+    flex: 1;
+    background-color: var(--sf-panel-bg);
+    color: var(--sf-text-color);
+    border: 1px solid var(--sf-panel-border);
+    border-radius: 4px;
+    padding: 5px;
+}
+
+.sf-parameter-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+}
+
+.sf-parameter-name, 
+.sf-output-name {
+    flex: 1;
+    background-color: var(--sf-panel-bg);
+    color: var(--sf-text-color);
+    border: 1px solid var(--sf-panel-border);
+    border-radius: 4px;
+    padding: 5px;
+    margin-right: 8px;
+}
+
+.sf-property-actions {
+    margin-top: 20px;
+    text-align: right;
+}
+
+.sf-footer {
+    grid-column: 1 / 4;
+    grid-row: 3;
+    background-color: var(--sf-panel-header);
+    border-top: 1px solid var(--sf-panel-border);
+    padding: 10px 15px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.sf-coordinates {
+    font-family: monospace;
+    font-size: 14px;
+    color: var(--sf-neutral-color);
+}
+
+/* Context Menu */
+.sf-context-menu {
+    position: fixed;
+    background-color: var(--sf-panel-bg);
+    border: 1px solid var(--sf-panel-border);
+    border-radius: 4px;
+    box-shadow: var(--sf-shadow);
+    padding: 5px 0;
+    min-width: 150px;
+    z-index: 1000;
+}
+
+.sf-context-menu-item {
+    padding: 8px 15px;
+    cursor: pointer;
+}
+
+.sf-context-menu-item:hover {
+    background-color: var(--sf-hover-bg);
+}
+
+.sf-context-menu-separator {
+    height: 1px;
+    background-color: var(--sf-panel-border);
+    margin: 5px 0;
+}
+
+/* Block Styles */
+.sf-block {
+    position: absolute;
+    background-color: var(--sf-block-bg);
+    color: var(--sf-text-color);
+    border: 1px solid var(--sf-block-border);
+    border-radius: 6px;
+    padding: 10px;
+    min-width: 180px;
+    box-shadow: var(--sf-shadow);
+    cursor: move;
+    user-select: none;
+    transition: box-shadow 0.2s, transform 0.1s;
+}
+
+.sf-block select {
+    background-color: rgba(30, 30, 30, 0.8);
+    color: rgba(255, 255, 255, 0.95);
+    border: 1px solid rgba(255, 255, 255, 0.4);
+    padding: 6px 10px;
+    border-radius: 4px;
+    width: 100%;
+    margin: 2px 0;
+    appearance: none; /* Remove default arrow */
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    background-image: url("data:image/svg+xml;utf8,<svg fill='white' height='24' viewBox='0 0 24 24' width='24' xmlns='http://www.w3.org/2000/svg'><path d='M7 10l5 5 5-5z'/><path d='M0 0h24v24H0z' fill='none'/></svg>");
+    background-repeat: no-repeat;
+    background-position: right 8px center;
+    background-size: 16px;
+    cursor: pointer;
+    transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.sf-block select:hover {
+    border-color: rgba(255, 255, 255, 0.6);
+    box-shadow: 0 0 5px rgba(255, 255, 255, 0.3);
+}
+
+.sf-block select:focus {
+    outline: none;
+    border-color: var(--sf-primary-color);
+    box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.3);
+}
+
+.sf-block:hover {
+    box-shadow: 0 5px 10px rgba(0, 0, 0, 0.3);
+}
+
+.sf-block.selected {
+    box-shadow: 0 0 0 2px var(--sf-primary-color);
+}
+
+.sf-block-title {
+    color: rgba(255, 255, 255, 0.95);
+    font-weight: bold;
+    text-align: center;
+    margin-bottom: 10px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.3);
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+    font-size: 14px;
+}
+
+.sf-block-content {
+    padding: 5px 5px;
+}
+
+/* Improved margin between block elements */
+.sf-block-content > div {
+    margin-bottom: 10px;
+}
+
+.sf-block-content > div:last-child {
+    margin-bottom: 5px;
+}
+
+.sf-connector {
+    width: 12px;
+    height: 12px;
+    background-color: var(--sf-connector-color);
+    border: 2px solid var(--sf-text-color);
+    border-radius: 50%;
+    position: absolute;
+    cursor: pointer;
+    transition: transform 0.2s, background-color 0.2s;
+}
+
+.sf-connector:hover {
+    transform: scale(1.2);
+    background-color: var(--sf-warning-color);
+}
+
+.sf-connector.input {
+    top: 50%;
+    left: -8px;
+    transform: translateY(-50%);
+}
+
+.sf-connector.output {
+    top: 50%;
+    right: -8px;
+    transform: translateY(-50%);
+}
+
+.sf-connector.input:hover {
+    transform: translateY(-50%) scale(1.2);
+}
+
+.sf-connector.output:hover {
+    transform: translateY(-50%) scale(1.2);
+}
+
+.sf-connection {
+    position: absolute;
+    pointer-events: none;
+    z-index: 1;
+}
+
+.sf-connection path {
+    stroke: rgba(52, 152, 219, 0.8);
+    stroke-width: 2.5px;
+    fill: none;
+    filter: drop-shadow(0 0 3px rgba(52, 152, 219, 0.3));
+    pointer-events: auto;
+    cursor: pointer;
+    transition: stroke-width 0.2s, stroke 0.2s, filter 0.2s;
+}
+
+.sf-connection path:hover {
+    stroke-width: 4px;
+    stroke: rgba(52, 152, 219, 1);
+    filter: drop-shadow(0 0 5px rgba(52, 152, 219, 0.6));
+}
+
+/* Different connection colors based on source block type */
+.sf-connection.logic path {
+    stroke: rgba(155, 89, 182, 0.8);
+    filter: drop-shadow(0 0 3px rgba(155, 89, 182, 0.3));
+}
+.sf-connection.logic path:hover {
+    stroke: rgba(155, 89, 182, 1);
+    filter: drop-shadow(0 0 5px rgba(155, 89, 182, 0.6));
+}
+
+.sf-connection.math path {
+    stroke: rgba(46, 204, 113, 0.8);
+    filter: drop-shadow(0 0 3px rgba(46, 204, 113, 0.3));
+}
+.sf-connection.math path:hover {
+    stroke: rgba(46, 204, 113, 1);
+    filter: drop-shadow(0 0 5px rgba(46, 204, 113, 0.6));
+}
+
+/* Add temporary connection line styling */
+.sf-temp-connection {
+    pointer-events: none;
+}
+
+.sf-temp-connection path {
+    stroke-dasharray: 5, 5;
+    animation: dash 1s linear infinite;
+}
+
+@keyframes dash {
+    to {
+        stroke-dashoffset: -10;
+    }
+}
+
+.sf-property-panel {
+    grid-column: 3;
+    grid-row: 2;
+    background-color: var(--sf-panel-bg);
+    border-left: 1px solid var(--sf-panel-border);
+    padding: 0;
+    display: none;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.sf-property-panel.active {
+    display: flex;
+}
+
+.sf-property-panel-header {
+    background-color: var(--sf-panel-header);
+    padding: 10px 15px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid var(--sf-panel-border);
+}
+
+.sf-property-panel-header h3 {
+    margin: 0;
+}
+
+.sf-property-panel-content {
+    flex: 1;
+    padding: 15px;
+    overflow-y: auto;
+}
+
+.sf-property-group {
+    margin-bottom: 20px;
+    background-color: var(--sf-bg-color);
+    padding: 10px;
+    border-radius: 4px;
+}
+
+.sf-property-group h5 {
+    margin-top: 0;
+    margin-bottom: 10px;
+    color: var(--sf-primary-color);
+    border-bottom: 1px solid var(--sf-panel-border);
+    padding-bottom: 5px;
+}
+
+.sf-property-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+}
+
+.sf-property-row label {
+    flex: 0 0 80px;
+}
+
+.sf-property-row input, 
+.sf-property-row select {
+    flex: 1;
+    background-color: var(--sf-panel-bg);
+    color: var(--sf-text-color);
+    border: 1px solid var(--sf-panel-border);
+    border-radius: 4px;
+    padding: 5px;
+}
+
+.sf-parameter-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+}
+
+.sf-parameter-name, 
+.sf-output-name {
+    flex: 1;
+    background-color: var(--sf-panel-bg);
+    color: var(--sf-text-color);
+    border: 1px solid var(--sf-panel-border);
+    border-radius: 4px;
+    padding: 5px;
+    margin-right: 8px;
+}
+
+.sf-property-actions {
+    margin-top: 20px;
+    text-align: right;
+}
+
+.sf-footer {
+    grid-column: 1 / 4;
+    grid-row: 3;
+    background-color: var(--sf-panel-header);
+    border-top: 1px solid var(--sf-panel-border);
+    padding: 10px 15px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.sf-coordinates {
+    font-family: monospace;
+    font-size: 14px;
+    color: var(--sf-neutral-color);
+}
+
+/* Context Menu */
+.sf-context-menu {
+    position: fixed;
+    background-color: var(--sf-panel-bg);
+    border: 1px solid var(--sf-panel-border);
+    border-radius: 4px;
+    box-shadow: var(--sf-shadow);
+    padding: 5px 0;
+    min-width: 150px;
+    z-index: 1000;
+}
+
+.sf-context-menu-item {
+    padding: 8px 15px;
+    cursor: pointer;
+}
+
+.sf-context-menu-item:hover {
+    background-color: var(--sf-hover-bg);
+}
+
+.sf-context-menu-separator {
+    height: 1px;
+    background-color: var(--sf-panel-border);
+    margin: 5px 0;
+}
+
+/* Block Styles */
+.sf-block {
+    position: absolute;
+    background-color: var(--sf-block-bg);
+    color: var(--sf-text-color);
+    border: 1px solid var(--sf-block-border);
+    border-radius: 6px;
+    padding: 10px;
+    min-width: 180px;
+    box-shadow: var(--sf-shadow);
+    cursor: move;
+    user-select: none;
+    transition: box-shadow 0.2s, transform 0.1s;
+}
+
+.sf-block:hover {
+    box-shadow: 0 5px 10px rgba(0, 0, 0, 0.3);
+}
+
+.sf-block.selected {
+    box-shadow: 0 0 0 2px var(--sf-primary-color);
+}
+
+.sf-block-title {
+    color: rgba(255, 255, 255, 0.95);
+    font-weight: bold;
+    text-align: center;
+    margin-bottom: 10px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.3);
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+    font-size: 14px;
+}
+
+.sf-block-content {
+    padding: 5px 5px;
+}
+
+/* Improved margin between block elements */
+.sf-block-content > div {
+    margin-bottom: 10px;
+}
+
+.sf-block-content > div:last-child {
+    margin-bottom: 5px;
+}
+
+.sf-connector {
+    width: 12px;
+    height: 12px;
+    background-color: var(--sf-connector-color);
+    border: 2px solid var(--sf-text-color);
+    border-radius: 50%;
+    position: absolute;
+    cursor: pointer;
+    transition: transform 0.2s, background-color 0.2s;
+}
+
+.sf-connector:hover {
+    transform: scale(1.2);
+    background-color: var(--sf-warning-color);
+}
+
+.sf-connector.input {
+    top: 50%;
+    left: -8px;
+    transform: translateY(-50%);
+}
+
+.sf-connector.output {
+    top: 50%;
+    right: -8px;
+    transform: translateY(-50%);
+}
+
+.sf-connector.input:hover {
+    transform: translateY(-50%) scale(1.2);
+}
+
+.sf-connector.output:hover {
+    transform: translateY(-50%) scale(1.2);
+}
+
+.sf-connection {
+    position: absolute;
+    pointer-events: none;
+    z-index: 1;
+}
+
+.sf-connection path {
+    stroke: rgba(52, 152, 219, 0.8);
+    stroke-width: 2.5px;
+    fill: none;
+    filter: drop-shadow(0 0 3px rgba(52, 152, 219, 0.3));
+    pointer-events: auto;
+    cursor: pointer;
+    transition: stroke-width 0.2s, stroke 0.2s, filter 0.2s;
+}
+
+.sf-connection path:hover {
+    stroke-width: 4px;
+    stroke: rgba(52, 152, 219, 1);
+    filter: drop-shadow(0 0 5px rgba(52, 152, 219, 0.6));
+}
+
+/* Different connection colors based on source block type */
+.sf-connection.logic path {
+    stroke: rgba(155, 89, 182, 0.8);
+    filter: drop-shadow(0 0 3px rgba(155, 89, 182, 0.3));
+}
+.sf-connection.logic path:hover {
+    stroke: rgba(155, 89, 182, 1);
+    filter: drop-shadow(0 0 5px rgba(155, 89, 182, 0.6));
+}
+
+.sf-connection.math path {
+    stroke: rgba(46, 204, 113, 0.8);
+    filter: drop-shadow(0 0 3px rgba(46, 204, 113, 0.3));
+}
+.sf-connection.math path:hover {
+    stroke: rgba(46, 204, 113, 1);
+    filter: drop-shadow(0 0 5px rgba(46, 204, 113, 0.6));
+}
+
+/* Add temporary connection line styling */
+.sf-temp-connection {
+    pointer-events: none;
+}
+
+.sf-temp-connection path {
+    stroke-dasharray: 5, 5;
+    animation: dash 1s linear infinite;
+}
+
+@keyframes dash {
+    to {
+        stroke-dashoffset: -10;
+    }
+}
+
+.sf-property-panel {
+    grid-column: 3;
+    grid-row: 2;
+    background-color: var(--sf-panel-bg);
+    border-left: 1px solid var(--sf-panel-border);
+    padding: 0;
+    display: none;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.sf-property-panel.active {
+    display: flex;
+}
+
+.sf-property-panel-header {
+    background-color: var(--sf-panel-header);
+    padding: 10px 15px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid var(--sf-panel-border);
+}
+
+.sf-property-panel-header h3 {
+    margin: 0;
+}
+
+.sf-property-panel-content {
+    flex: 1;
+    padding: 15px;
+    overflow-y: auto;
+}
+
+.sf-property-group {
+    margin-bottom: 20px;
+    background-color: var(--sf-bg-color);
+    padding: 10px;
+    border-radius: 4px;
+}
+
+.sf-property-group h5 {
+    margin-top: 0;
+    margin-bottom: 10px;
+    color: var(--sf-primary-color);
+    border-bottom: 1px solid var(--sf-panel-border);
+    padding-bottom: 5px;
+}
+
+.sf-property-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+}
+
+.sf-property-row label {
+    flex: 0 0 80px;
+}
+
+.sf-property-row input, 
+.sf-property-row select {
+    flex: 1;
+    background-color: var(--sf-panel-bg);
+    color: var(--sf-text-color);
+    border: 1px solid var(--sf-panel-border);
+    border-radius: 4px;
+    padding: 5px;
+}
+
+.sf-parameter-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+}
+
+.sf-parameter-name, 
+.sf-output-name {
+    flex: 1;
+    background-color: var(--sf-panel-bg);
+    color: var(--sf-text-color);
+    border: 1px solid var(--sf-panel-border);
+    border-radius: 4px;
+    padding: 5px;
+    margin-right: 8px;
+}
+
+.sf-property-actions {
+    margin-top: 20px;
+    text-align: right;
+}
+
+.sf-footer {
+    grid-column: 1 / 4;
+    grid-row: 3;
+    background-color: var(--sf-panel-header);
+    border-top: 1px solid var(--sf-panel-border);
+    padding: 10px 15px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.sf-coordinates {
+    font-family: monospace;
+    font-size: 14px;
+    color: var(--sf-neutral-color);
+}
+
+/* Context Menu */
+.sf-context-menu {
+    position: fixed;
+    background-color: var(--sf-panel-bg);
+    border: 1px solid var(--sf-panel-border);
+    border-radius: 4px;
+    box-shadow: var(--sf-shadow);
+    padding: 5px 0;
+    min-width: 150px;
+    z-index: 1000;
+}
+
+.sf-context-menu-item {
+    padding: 8px 15px;
+    cursor: pointer;
+}
+
+.sf-context-menu-item:hover {
+    background-color: var(--sf-hover-bg);
+}
+
+.sf-context-menu-separator {
+    height: 1px;
+    background-color: var(--sf-panel-border);
+    margin: 5px 0;
+}
+
+/* Block Styles */
+.sf-block {
+    position: absolute;
+    background-color: var(--sf-block-bg);
+    color: var(--sf-text-color);
+    border: 1px solid var(--sf-block-border);
+    border-radius: 6px;
+    padding: 10px;
+    min-width: 180px;
+    box-shadow: var(--sf-shadow);
+    cursor: move;
+    user-select: none;
+    transition: box-shadow 0.2s, transform 0.1s;
+}
+
+.sf-block:hover {
+    box-shadow: 0 5px 10px rgba(0, 0, 0, 0.3);
+}
+
+.sf-block.selected {
+    box-shadow: 0 0 0 2px var(--sf-primary-color);
+}
+
+.sf-block-title {
+    color: rgba(255, 255, 255, 0.95);
+    font-weight: bold;
+    text-align: center;
+    margin-bottom: 10px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.3);
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+    font-size: 14px;
+}
+
+.sf-block-content {
+    padding: 5px 5px;
+}
+
+/* Improved margin between block elements */
+.sf-block-content > div {
+    margin-bottom: 10px;
+}
+
+.sf-block-content > div:last-child {
+    margin-bottom: 5px;
+}
+
+.sf-connector {
+    width: 12px;
+    height: 12px;
+    background-color: var(--sf-connector-color);
+    border: 2px solid var(--sf-text-color);
+    border-radius: 50%;
+    position: absolute;
+    cursor: pointer;
+    transition: transform 0.2s, background-color 0.2s;
+}
+
+.sf-connector:hover {
+    transform: scale(1.2);
+    background-color: var(--sf-warning-color);
+}
+
+.sf-connector.input {
+    top: 50%;
+    left: -8px;
+    transform: translateY(-50%);
+}
+
+.sf-connector.output {
+    top: 50%;
+    right: -8px;
+    transform: translateY(-50%);
+}
+
+.sf-connector.input:hover {
+    transform: translateY(-50%) scale(1.2);
+}
+
+.sf-connector.output:hover {
+    transform: translateY(-50%) scale(1.2);
+}
+
+.sf-connection {
+    position: absolute;
+    pointer-events: none;
+    z-index: 1;
+}
+
+.sf-connection path {
+    stroke: rgba(52, 152, 219, 0.8);
+    stroke-width: 2.5px;
+    fill: none;
+    filter: drop-shadow(0 0 3px rgba(52, 152, 219, 0.3));
+    pointer-events: auto;
+    cursor: pointer;
+    transition: stroke-width 0.2s, stroke 0.2s, filter 0.2s;
+}
+
+.sf-connection path:hover {
+    stroke-width: 4px;
+    stroke: rgba(52, 152, 219, 1);
+    filter: drop-shadow(0 0 5px rgba(52, 152, 219, 0.6));
+}
+
+/* Different connection colors based on source block type */
+.sf-connection.logic path {
+    stroke: rgba(155, 89, 182, 0.8);
+    filter: drop-shadow(0 0 3px rgba(155, 89, 182, 0.3));
+}
+.sf-connection.logic path:hover {
+    stroke: rgba(155, 89, 182, 1);
+    filter: drop-shadow(0 0 5px rgba(155, 89, 182, 0.6));
+}
+
+.sf-connection.math path {
+    stroke: rgba(46, 204, 113, 0.8);
+    filter: drop-shadow(0 0 3px rgba(46, 204, 113, 0.3));
+}
+.sf-connection.math path:hover {
+    stroke: rgba(46, 204, 113, 1);
+    filter: drop-shadow(0 0 5px rgba(46, 204, 113, 0.6));
+}
+
+/* Add temporary connection line styling */
+.sf-temp-connection {
+    pointer-events: none;
+}
+
+.sf-temp-connection path {
+    stroke-dasharray: 5, 5;
+    animation: dash 1s linear infinite;
+}
+
+@keyframes dash {
+    to {
+        stroke-dashoffset: -10;
+    }
+}
+
+/* Custom scrollbar for dark theme */
+.sf-theme-dark ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+.sf-theme-dark ::-webkit-scrollbar-track {
+    background: var(--sf-bg-color);
+}
+
+.sf-theme-dark ::-webkit-scrollbar-thumb {
+    background: var(--sf-panel-border);
+    border-radius: 4px;
+}
+
+.sf-theme-dark ::-webkit-scrollbar-thumb:hover {
+    background: var(--sf-primary-color);
+}
+
+/* Responsive adjustments */
+@media (max-width: 1200px) {
+    .sf-editor {
+        grid-template-columns: 200px 1fr 280px;
+    }
+}
+
+@media (max-width: 900px) {
+    .sf-editor {
+        grid-template-columns: 180px 1fr 0;
+    }
+    
+    .sf-property-panel {
+        position: absolute;
+        top: 50px;
+        right: 0;
+        bottom: 40px;
+        width: 280px;
+        z-index: 100;
+    }
+}
+
+/* Styles for minimap (if implemented) */
+.sf-minimap {
+    position: absolute;
+    bottom: 20px;
+    right: 20px;
+    width: 150px;
+    height: 100px;
+    background-color: var(--sf-panel-bg);
+    border: 1px solid var(--sf-panel-border);
+    border-radius: 4px;
+    overflow: hidden;
+    z-index: 5;
+    opacity: 0.8;
+    transition: opacity 0.2s;
+}
+
+.sf-minimap:hover {
+    opacity: 1;
+}
+
+.sf-minimap-content {
+    transform-origin: 0 0;
+    position: absolute;
+    background-color: var(--sf-canvas-bg);
+    background-image: 
+        linear-gradient(var(--sf-canvas-grid) 1px, transparent 1px),
+        linear-gradient(90deg, var(--sf-canvas-grid) 1px, transparent 1px);
+    background-size: 5px 5px;
+}
+
+.sf-minimap-viewport {
+    position: absolute;
+    border: 1px solid var(--sf-primary-color);
+    background-color: rgba(52, 152, 219, 0.1);
+    cursor: move;
+}
+
+/* Connector highlight when hovering during connection creation */
+.sf-connector-highlight {
+    box-shadow: 0 0 0 3px rgba(39, 174, 96, 0.8);
+}
+
+/* Connector styles */
+.sf-connector {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background-color: #3498db;
+    cursor: crosshair;
+}
+
+.sf-connector.input {
+    background-color: #3498db;
+}
+
+.sf-connector.output {
+    background-color: #2ecc71;
+}
+
+/* Glass effect for blocks */
+.sf-glass-effect {
+    background-color: rgba(0, 0, 0, 0.6) !important;
+    border: 2px solid rgba(255, 255, 255, 0.7) !important;
+    backdrop-filter: blur(6px);
+    box-shadow: 0 0 15px rgba(255, 255, 255, 0.15), inset 0 0 15px rgba(255, 255, 255, 0.05) !important;
+}
+
+/* Redefine block colors for glass effect */
+.sf-block.logic { 
+    border-color: rgba(155, 89, 182, 0.8) !important;
+    box-shadow: 0 0 15px rgba(155, 89, 182, 0.3) !important;
+}
+
+.sf-block.math { 
+    border-color: rgba(46, 204, 113, 0.8) !important;
+    box-shadow: 0 0 15px rgba(46, 204, 113, 0.3) !important;
+}
+
+.sf-block.variable { 
+    border-color: rgba(243, 156, 18, 0.8) !important;
+    box-shadow: 0 0 15px rgba(243, 156, 18, 0.3) !important;
+}
+
+.sf-block.function { 
+    border-color: rgba(52, 152, 219, 0.8) !important;
+    box-shadow: 0 0 15px rgba(52, 152, 219, 0.3) !important;
+}
+
+.sf-block.control { 
+    border-color: rgba(231, 76, 60, 0.8) !important;
+    box-shadow: 0 0 15px rgba(231, 76, 60, 0.3) !important;
+}
+
+.sf-block.dom { 
+    border-color: rgba(26, 188, 156, 0.8) !important;
+    box-shadow: 0 0 15px rgba(26, 188, 156, 0.3) !important;
+}
+
+.sf-block.customFunction {
+    border-color: rgba(142, 68, 173, 0.8) !important;
+    box-shadow: 0 0 15px rgba(142, 68, 173, 0.3) !important;
+}
+
+.sf-connector-container {
+    position: absolute;
+    display: flex;
+    align-items: center;
+    height: 20px;
+}
+
+.sf-connector-container.input {
+    left: -8px;
+    flex-direction: row;
+}
+
+.sf-connector-container.output {
+    right: -8px;
+    flex-direction: row-reverse;
+}
+
+.sf-connector-label {
+    font-size: 12px;
+    white-space: nowrap;
+    color: rgba(255, 255, 255, 0.9);
+    padding: 0 5px;
+}
+
+.sf-connector-label.input {
+    text-align: left;
+}
+
+.sf-connector-label.output {
+    text-align: right;
+}
+
+.sf-block.utilities { 
+    border-color: rgba(127, 140, 141, 0.8) !important;
+    box-shadow: 0 0 15px rgba(127, 140, 141, 0.3) !important;
+}
+
+.sf-block.data { 
+    border-color: rgba(230, 126, 34, 0.8) !important;
+    box-shadow: 0 0 15px rgba(230, 126, 34, 0.3) !important;
+}
+
+.sf-block.async { 
+    border-color: rgba(41, 128, 185, 0.8) !important;
+    box-shadow: 0 0 15px rgba(41, 128, 185, 0.3) !important;
+}
+
+/* Palette block template colors to match their respective block colors */
+.sf-block-template[data-category="utilities"] {
+    background-color: rgba(127, 140, 141, 0.7);
+}
+
+.sf-block-template[data-category="data"] {
+    background-color: rgba(230, 126, 34, 0.7);
+}
+
+.sf-block-template[data-category="async"] {
+    background-color: rgba(41, 128, 185, 0.7);
+}
+
+/* Improved category styling in palette */
+.sf-category {
+    margin-bottom: 15px;
+    border-radius: 6px;
+    overflow: hidden;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+}
+
+.sf-category-title {
+    font-weight: bold;
+    padding: 10px 12px;
+    background-color: var(--sf-secondary-color);
+    color: var(--sf-text-color);
+    margin-bottom: 0;
+    font-size: 14px;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.sf-block-template {
+    background-color: rgba(52, 152, 219, 0.7);
+    color: var(--sf-text-color);
+    border-radius: 0;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+    padding: 10px 12px;
+    margin-bottom: 0;
+    cursor: grab;
+    transition: background-color 0.2s, transform 0.1s;
+}
+
+.sf-block-template:last-child {
+    border-bottom: none;
+    border-bottom-left-radius: 6px;
+    border-bottom-right-radius: 6px;
+}
+
+.sf-block-template:hover {
+    background-color: rgba(52, 152, 219, 0.9);
+    transform: translateX(5px);
+}
+
+.sf-block-template:active {
+    cursor: grabbing;
+    transform: translateX(0) scale(0.98);
+}
+
+/* Color each category differently in the palette */
+.sf-block-template[data-category="logic"] {
+    background-color: rgba(155, 89, 182, 0.7);
+}
+.sf-block-template[data-category="logic"]:hover {
+    background-color: rgba(155, 89, 182, 0.9);
+}
+
+.sf-block-template[data-category="math"] {
+    background-color: rgba(46, 204, 113, 0.7);
+}
+.sf-block-template[data-category="math"]:hover {
+    background-color: rgba(46, 204, 113, 0.9);
+}
+
+.sf-block-template[data-category="variable"] {
+    background-color: rgba(243, 156, 18, 0.7);
+}
+.sf-block-template[data-category="variable"]:hover {
+    background-color: rgba(243, 156, 18, 0.9);
+}
+
+.sf-block-template[data-category="function"] {
+    background-color: rgba(52, 152, 219, 0.7);
+}
+.sf-block-template[data-category="function"]:hover {
+    background-color: rgba(52, 152, 219, 0.9);
+}
+
+.sf-block-template[data-category="control"] {
+    background-color: rgba(231, 76, 60, 0.7);
+}
+.sf-block-template[data-category="control"]:hover {
+    background-color: rgba(231, 76, 60, 0.9);
+}
+
+.sf-block-template[data-category="dom"] {
+    background-color: rgba(26, 188, 156, 0.7);
+}
+.sf-block-template[data-category="dom"]:hover {
+    background-color: rgba(26, 188, 156, 0.9);
+}
+/* Fix block width and ensure consistent spacing */
+.sf-block {
+    position: absolute;
+    min-width: 200px;
+    max-width: 280px;
+    padding: 12px 15px;
+    border-radius: 8px;
+}
+
+/* Ensure blocks with many connectors have enough height */
+.sf-connector-container:last-of-type {
+    margin-bottom: 10px;
+}
+
+/* Enhanced glass effect for blocks */
+.sf-glass-effect {
+    background-color: rgba(0, 0, 0, 0.6) !important;
+    border: 2px solid rgba(255, 255, 255, 0.7) !important;
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+    box-shadow: 0 0 15px rgba(255, 255, 255, 0.15), inset 0 0 15px rgba(255, 255, 255, 0.05) !important;
+}
+
+.sf-block:hover {
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3), inset 0 0 20px rgba(255, 255, 255, 0.1) !important;
+}
+
+/* Add subtle glow effect to connectors */
+.sf-connector {
+    box-shadow: 0 0 5px rgba(255, 255, 255, 0.3);
+}
+
+.sf-connector:hover {
+    box-shadow: 0 0 8px rgba(255, 255, 255, 0.6);
+}
+
+/* Style dropdown options - better contrasting colors */
+.sf-block select option {
+    background-color: #2d2d2d;
+    color: rgba(255, 255, 255, 0.95);
+    padding: 8px;
+}
+
+/* Fix for different themes */
+.sf-theme-light .sf-block select {
+    background-color: rgba(240, 240, 240, 0.9);
+    color: rgba(33, 33, 33, 0.95);
+    border-color: rgba(0, 0, 0, 0.2);
+    background-image: url("data:image/svg+xml;utf8,<svg fill='black' height='24' viewBox='0 0 24 24' width='24' xmlns='http://www.w3.org/2000/svg'><path d='M7 10l5 5 5-5z'/><path d='M0 0h24v24H0z' fill='none'/></svg>");
+}
+
+.sf-theme-light .sf-block select option {
+    background-color: #f0f0f0;
+    color: rgba(33, 33, 33, 0.95);
+}
+
+.sf-block select {
+    height: 32px;
+    font-weight: 500;
+    letter-spacing: 0.3px;
+    text-shadow: 0 1px 1px rgba(0, 0, 0, 0.2);
+}
+
+.sf-block.logic select {
+    border-color: rgba(155, 89, 182, 0.6);
+}
+.sf-block.logic select:focus {
+    border-color: rgba(155, 89, 182, 0.8);
+    box-shadow: 0 0 0 2px rgba(155, 89, 182, 0.3);
+}
+
+.sf-block.math select {
+    border-color: rgba(46, 204, 113, 0.6);
+}
+.sf-block.math select:focus {
+    border-color: rgba(46, 204, 113, 0.8);
+    box-shadow: 0 0 0 2px rgba(46, 204, 113, 0.3);
+}
+
+.sf-block.variable select {
+    border-color: rgba(243, 156, 18, 0.6);
+}
+.sf-block.variable select:focus {
+    border-color: rgba(243, 156, 18, 0.8);
+    box-shadow: 0 0 0 2px rgba(243, 156, 18, 0.3);
+}
+
+.sf-block.function select {
+    border-color: rgba(52, 152, 219, 0.6);
+}
+.sf-block.function select:focus {
+    border-color: rgba(52, 152, 219, 0.8);
+    box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.3);
+}
+
+.sf-block.utilities select {
+    border-color: rgba(127, 140, 141, 0.6);
+}
+.sf-block.utilities select:focus {
+    border-color: rgba(127, 140, 141, 0.8);
+    box-shadow: 0 0 0 2px rgba(127, 140, 141, 0.3);
+}
+
+.sf-block.data select {
+    border-color: rgba(230, 126, 34, 0.6);
+}
+.sf-block.data select:focus {
+    border-color: rgba(230, 126, 34, 0.8);
+    box-shadow: 0 0 0 2px rgba(230, 126, 34, 0.3);
+}
+
+.sf-block.async select {
+    border-color: rgba(41, 128, 185, 0.6);
+}
+.sf-block.async select:focus {
+    border-color: rgba(41, 128, 185, 0.8);
+    box-shadow: 0 0 0 2px rgba(41, 128, 185, 0.3);
+}
+
+/* Fix output connector positioning */
+.sf-connector-container {
+    position: absolute;
+    display: flex;
+    align-items: center;
+    height: 20px;
+}
+
+.sf-connector-container.input {
+    left: -8px;
+    flex-direction: row;
+}
+
+.sf-connector-container.output {
+    right: -8px;
+    flex-direction: row; /* Changed from row-reverse to row */
+}
+
+.sf-connector-label {
+    font-size: 12px;
+    white-space: nowrap;
+    color: rgba(255, 255, 255, 0.9);
+    padding: 0 5px;
+}
