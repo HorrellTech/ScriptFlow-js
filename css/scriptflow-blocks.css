@@ -257,3 +257,201 @@
       max-width: 60px;
     }
   }
+
+/* Position in/out connectors perfectly at the center top/bottom of blocks */
+.sf-connector-container.input.in {
+  position: absolute !important;
+  left: 50% !important;
+  top: -12px !important;
+  transform: translateX(-50%) !important;
+  flex-direction: column !important;
+  width: auto !important;
+  height: auto !important;
+  z-index: 30 !important;
+}
+
+.sf-connector-container.output.out {
+  position: absolute !important;
+  left: 50% !important;
+  bottom: -12px !important;
+  top: auto !important;
+  transform: translateX(-50%) !important;
+  flex-direction: column-reverse !important;
+  width: auto !important;
+  height: auto !important;
+  z-index: 30 !important;
+}
+
+/* Make the in/out connectors visually distinct */
+.sf-connector.input.in-connector,
+.sf-connector.output.out-connector {
+  background-color: rgba(186, 85, 211, 0.8) !important; /* Purple for flow connectors */
+  border-color: rgba(255, 255, 255, 0.9) !important;
+  box-shadow: 0 0 5px rgba(186, 85, 211, 0.5) !important;
+  width: 12px !important;
+  height: 12px !important;
+}
+
+/* Style the connector labels for in/out */
+.sf-connector-label.in-label {
+  position: relative !important;
+  top: -8px !important; /* Position above the connector */
+  text-align: center !important;
+  font-size: 10px !important;
+  color: rgba(255, 255, 255, 0.9) !important;
+  margin-bottom: 2px !important;
+  white-space: nowrap !important;
+}
+
+.sf-connector-label.out-label {
+  position: relative !important;
+  bottom: -8px !important; /* Position below the connector */
+  text-align: center !important;
+  font-size: 10px !important;
+  color: rgba(255, 255, 255, 0.9) !important;
+  margin-top: 2px !important;
+  white-space: nowrap !important;
+}
+
+/* Make room in blocks for the labels */
+.sf-block {
+  padding-top: 18px !important; /* More space for in label */
+  padding-bottom: 18px !important; /* More space for out label */
+  margin-top: 10px !important; /* Space above for connection */
+  margin-bottom: 10px !important; /* Space below for connection */
+}
+
+/* Style flow connection paths */
+path.sf-connection-path[data-connection-type="flow"] {
+  stroke: rgba(186, 85, 211, 0.8) !important; /* Purple for flow connections */
+  stroke-width: 2.5px !important;
+  filter: drop-shadow(0 0 3px rgba(186, 85, 211, 0.3)) !important;
+}
+
+path.sf-connection-path[data-connection-type="flow"]:hover {
+  stroke: rgba(186, 85, 211, 1) !important;
+  stroke-width: 3.5px !important;
+  filter: drop-shadow(0 0 5px rgba(186, 85, 211, 0.6)) !important;
+}
+
+/* Add hover effect for in/out connectors */
+.sf-connector.input.in-connector:hover,
+.sf-connector.output.out-connector:hover,
+.sf-connector.input.in-connector.sf-connector-highlight,
+.sf-connector.output.out-connector.sf-connector-highlight {
+  background-color: rgba(186, 85, 211, 1) !important;
+  box-shadow: 0 0 8px rgba(186, 85, 211, 0.8) !important;
+  transform: scale(1.2) !important;
+}
+
+/* Make all connectors more visible */
+.sf-connector-hitbox {
+  width: 24px !important;
+  height: 24px !important;
+  display: flex !important;
+  justify-content: center !important;
+  align-items: center !important;
+  cursor: crosshair !important;
+  position: relative !important;
+  z-index: 25 !important;
+}
+
+/* Enhance bridge block styling */
+.sf-block[id^="block-"].bridge {
+  border: 2px dashed rgba(186, 85, 211, 0.5) !important;
+  background-color: rgba(0, 0, 0, 0.4) !important;
+}
+
+.sf-block[id^="block-"].bridge .sf-block-title {
+  color: rgba(186, 85, 211, 0.9) !important;
+}
+
+/* Flow connection styling */
+.sf-connector.input.in-connector,
+.sf-connector.output.out-connector {
+    background-color: rgba(186, 85, 211, 0.8) !important; /* Purple for flow connectors */
+    border-color: rgba(255, 255, 255, 0.9) !important;
+    box-shadow: 0 0 10px rgba(186, 85, 211, 0.5) !important;
+    width: 12px !important;
+    height: 12px !important;
+}
+
+/* Data connection styling */
+.sf-connector:not(.in-connector):not(.out-connector) {
+    background-color: rgba(52, 152, 219, 0.8) !important; /* Blue for data connectors */
+    border-color: rgba(255, 255, 255, 0.9) !important;
+    box-shadow: 0 0 5px rgba(52, 152, 219, 0.5) !important;
+}
+
+/* Connection paths */
+path.sf-connection-path[data-connection-type="flow"] {
+    stroke: rgba(186, 85, 211, 0.8) !important; /* Purple for flow */
+    stroke-width: 2.5px !important;
+}
+
+path.sf-connection-path[data-connection-type="data"] {
+    stroke: rgba(52, 152, 219, 0.8) !important; /* Blue for data */
+    stroke-width: 2px !important;
+}
+
+/* Fix for in/out connector horizontal alignment */
+.sf-connector-container.input.in {
+  position: absolute !important;
+  left: 25% !important;
+  top: -36px !important;
+  transform: translateX(-50%) !important;
+  flex-direction: column !important;
+  width: auto !important;
+  height: auto !important;
+  z-index: 30 !important;
+  text-align: center !important;
+}
+
+.sf-connector-container.output.out {
+  position: absolute !important;
+  left: 75% !important;
+  bottom: -48px !important;
+  top: auto !important;
+  transform: translateX(-50%) !important;
+  flex-direction: column-reverse !important;
+  width: auto !important;
+  height: auto !important;
+  z-index: 30 !important;
+  text-align: center !important;
+}
+
+/* Align the connector hitboxes to be centered */
+.sf-connector-container.input.in .sf-connector-hitbox,
+.sf-connector-container.output.out .sf-connector-hitbox {
+  display: flex !important;
+  justify-content: center !important;
+  align-items: center !important;
+  width: 24px !important;
+  height: 24px !important;
+  position: relative !important;
+  left: 0 !important; /* Reset any left positioning */
+  transform: none !important; /* Remove any transform */
+}
+
+/* Center the connector labels */
+.sf-connector-label.in-label,
+.sf-connector-label.out-label {
+  text-align: center !important;
+  width: 100% !important;
+  white-space: nowrap !important;
+  left: 0 !important; /* Reset any left positioning */
+  right: 0 !important; /* Reset any right positioning */
+  transform: none !important; /* Remove any transform */
+}
+
+.sf-connector-label.in-label {
+  position: relative !important;
+  top: -6px !important;
+  margin-bottom: 2px !important;
+}
+
+.sf-connector-label.out-label {
+  position: relative !important;
+  bottom: 32px !important;
+  margin-top: 2px !important;
+}

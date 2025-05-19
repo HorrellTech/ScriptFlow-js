@@ -1596,3 +1596,294 @@
 .sf-connector-container:first-of-type {
     top: 30px; /* Start first connector below the title */
 }
+
+/* Property List Styling */
+.sf-property-list-container {
+    margin-top: 8px;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    padding-top: 8px;
+  }
+  
+  .sf-property-items {
+    max-height: 200px;
+    overflow-y: auto;
+    margin-bottom: 5px;
+  }
+  
+  .sf-property-item {
+    display: flex;
+    margin-bottom: 4px;
+    gap: 4px;
+    align-items: center;
+  }
+  
+  .sf-property-name, .sf-property-value {
+    flex: 1;
+    min-width: 0;
+    height: 24px;
+    font-size: 12px;
+    padding: 2px 4px;
+    background-color: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    color: rgba(255, 255, 255, 0.9);
+    border-radius: 3px;
+  }
+  
+  .sf-remove-property {
+    flex: 0 0 24px;
+    width: 24px;
+    height: 24px;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: rgba(231, 76, 60, 0.2);
+    border: 1px solid rgba(231, 76, 60, 0.5);
+    color: rgba(231, 76, 60, 0.9);
+    border-radius: 3px;
+    cursor: pointer;
+  }
+  
+  .sf-add-property {
+    width: 100%;
+    padding: 3px;
+    font-size: 12px;
+    background-color: rgba(46, 204, 113, 0.2);
+    border: 1px solid rgba(46, 204, 113, 0.5);
+    color: rgba(46, 204, 113, 0.9);
+    border-radius: 3px;
+    cursor: pointer;
+  }
+  
+  /* CodeMirror Styling */
+  .sf-code-container {
+    margin-top: 8px;
+    width: 100%;
+  }
+  
+  .sf-code-editor-wrapper {
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 3px;
+    overflow: hidden;
+  }
+  
+  .CodeMirror {
+    height: 100% !important;
+    font-size: 12px;
+  }
+  
+  /* Multiline Textarea Styling */
+  .sf-textarea-container {
+    margin-top: 8px;
+    width: 100%;
+  }
+  
+  .sf-textarea-wrapper {
+    width: 100%;
+    position: relative;
+  }
+  
+  .sf-multiline-textarea {
+    width: 100%;
+    min-height: 60px;
+    max-height: 300px;
+    resize: vertical;
+    font-family: monospace;
+    font-size: 12px;
+    background-color: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    color: rgba(255, 255, 255, 0.9);
+    border-radius: 3px;
+    padding: 6px;
+    line-height: 1.4;
+  }
+  
+  /* Light theme adjustments */
+  .sf-theme-light .sf-property-name,
+  .sf-theme-light .sf-property-value,
+  .sf-theme-light .sf-multiline-textarea {
+    background-color: rgba(0, 0, 0, 0.05);
+    border: 1px solid rgba(0, 0, 0, 0.2);
+    color: rgba(0, 0, 0, 0.8);
+  }
+  
+  .sf-theme-light .sf-remove-property {
+    background-color: rgba(231, 76, 60, 0.1);
+    border: 1px solid rgba(231, 76, 60, 0.3);
+    color: rgba(231, 76, 60, 0.8);
+  }
+  
+  .sf-theme-light .sf-add-property {
+    background-color: rgba(46, 204, 113, 0.1);
+    border: 1px solid rgba(46, 204, 113, 0.3);
+    color: rgba(46, 204, 113, 0.8);
+  }
+
+  /* Search box */
+.sf-palette-search-container {
+    padding: 0 10px 10px 10px;
+    border-bottom: 1px solid var(--sf-panel-border);
+    margin-bottom: 10px;
+}
+
+.sf-palette-search {
+    width: 100%;
+    background-color: var(--sf-panel-bg);
+    color: var(--sf-text-color);
+    border: 1px solid var(--sf-panel-border);
+    border-radius: 4px;
+    padding: 8px;
+    padding-left: 28px;
+    background-image: url("data:image/svg+xml;utf8,<svg fill='gray' height='16' viewBox='0 0 24 24' width='16' xmlns='http://www.w3.org/2000/svg'><path d='M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z'/></svg>");
+    background-repeat: no-repeat;
+    background-position: 8px center;
+    background-size: 16px;
+}
+
+.sf-palette-search:focus {
+    outline: none;
+    border-color: var(--sf-primary-color);
+    box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.3);
+}
+
+/* Collapsible category styles */
+.sf-category {
+    margin-bottom: 5px;
+    border-radius: 6px;
+    overflow: hidden;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+    transition: margin 0.2s ease;
+}
+
+.sf-category-collapsed {
+    margin-bottom: 2px;
+}
+
+.sf-category-title {
+    display: flex;
+    align-items: center;
+    font-weight: bold;
+    padding: 10px 12px;
+    background-color: var(--sf-secondary-color);
+    color: var(--sf-text-color);
+    cursor: pointer;
+    user-select: none;
+    transition: background-color 0.2s;
+}
+
+.sf-category-title:hover {
+    background-color: var(--sf-primary-color);
+}
+
+.sf-category-expand {
+    margin-right: 8px;
+    font-size: 10px;
+    width: 12px;
+    display: inline-block;
+}
+
+.sf-category-count {
+    margin-left: auto;
+    background-color: rgba(255, 255, 255, 0.2);
+    border-radius: 12px;
+    padding: 2px 8px;
+    font-size: 12px;
+    min-width: 16px;
+    text-align: center;
+}
+
+.sf-category-blocks {
+    max-height: 300px;
+    overflow-y: auto;
+    transition: max-height 0.3s ease;
+}
+
+/* CodeMirror integration styles */
+.CodeMirror {
+    height: auto;
+    font-family: 'Consolas', 'Monaco', 'Andale Mono', monospace;
+    font-size: 14px;
+    line-height: 1.5;
+    border-radius: 4px;
+  }
+  
+  .sf-theme-dark .CodeMirror {
+    border: 1px solid #333;
+  }
+  
+  .sf-theme-light .CodeMirror {
+    border: 1px solid #ddd;
+  }
+  
+  /* Dialog styles for code preview */
+  .sf-dialog-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  
+  .sf-dialog-actions {
+    display: flex;
+    gap: 8px;
+  }
+  
+  #sf-code-editor-container {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+  }
+  
+  .sf-dialog-content {
+    position: relative;
+  }
+  
+  /* CodeMirror scrollbar styling */
+  .CodeMirror-scrollbar-filler,
+  .CodeMirror-gutter-filler {
+    background-color: transparent;
+  }
+  
+  .CodeMirror-vscrollbar,
+  .CodeMirror-hscrollbar {
+    outline: none;
+  }
+  
+  /* Format code button */
+  #sf-format-code {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    padding: 5px 10px;
+    font-size: 13px;
+  }
+  
+  #sf-format-code .sf-icon {
+    font-style: normal;
+    line-height: 1;
+    font-size: 14px;
+  }
+
+  .sf-palette {
+    padding-top: 10px;
+  }
+  
+  .sf-palette-search-container {
+    padding: 0 10px 10px;
+  }
+  
+  .sf-palette-search {
+    width: 100%;
+    padding: 8px;
+    border-radius: 4px;
+    border: 1px solid var(--sf-border-color);
+    background: var(--sf-input-bg);
+    color: var(--sf-text-color);
+  }
+  
+  .sf-palette-search:focus {
+    outline: none;
+    border-color: var(--sf-accent-color);
+    box-shadow: 0 0 0 2px rgba(var(--sf-accent-color-rgb), 0.3);
+  }

@@ -6,6 +6,9 @@
     <title>ScriptFlow - Visual JavaScript Scripting</title>
     <link rel="stylesheet" href="css/scriptflow.css">
     <link rel="stylesheet" href="css/scriptflow-blocks.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/codemirror.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/theme/monokai.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/addon/scroll/simplescrollbars.min.css">
     <style>
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -149,6 +152,7 @@
         <div class="action-buttons">
             <button onclick="openScriptFlowModal()">Open ScriptFlow Editor</button>
             <button id="tutorial-btn" style="background-color: #2ecc71">Quick Tutorial</button>
+            <button onclick="initializeDemoFlow()" style="background-color: #e67e22">Reset Demo</button>
         </div>
         
         <div class="feature-section">
@@ -172,6 +176,14 @@
         <h3>Save & Load Flows</h3>
         <p>Save your visual scripts and load them later for further editing. Export your JavaScript code to use in any project.</p>
     </main>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/codemirror.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/mode/javascript/javascript.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/js-beautify/1.14.7/beautify.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/addon/scroll/simplescrollbars.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/addon/edit/matchbrackets.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/addon/edit/closebrackets.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/addon/selection/active-line.min.js"></script>
 
     <script src="js/block-initialization.js"></script>
     <script src="js/scriptflow.js"></script>
