@@ -4320,15 +4320,18 @@ function openScriptFlowModal() {
 
 
 
-// Apply these patches to the ScriptFlow class after it loads
+/**
+ * This file contains fixes for the circular reference issues in ScriptFlow
+ */
+
 function applyScriptFlowFixes() {
-    if (!window.ScriptFlow) {
-        console.error("ScriptFlow class not found. Can't apply fixes.");
+    if (!window.scriptFlow) {
+        console.error("scriptFlow instance not found. Can't apply fixes.");
         return;
     }
-
-    // Fix for infinite recursion in code generation
-    ScriptFlow.prototype.generateBlockCode = function(block, processedBlocks = new Set()) {
+    
+    // Fix for the generateBlockCode method to prevent infinite recursion
+    window.scriptFlow.generateBlockCode = function(block, processedBlocks = new Set()) {
         // Guard against circular references
         if (processedBlocks.has(block.id)) {
             console.warn(`Circular reference detected for block ${block.id}. Skipping.`);
@@ -4355,104 +4358,111 @@ function applyScriptFlowFixes() {
         code = this.processChildBlocksContent(block, code, processedBlocks);
         
         // Replace options in the template
-        code = this.replaceOptionsInTemplate(block, code);
-        
-        return code;
-    };
-    
-    // Fix for the recursion in processChildBlocksContent
-    ScriptFlow.prototype.processChildBlocksContent = function(block, code, processedBlocks) {
-        // Find all child block placeholders in the code template
-        const childBlockRegex = /\{\{CHILD_BLOCKS\}\}/g;
-        
-        if (code.match(childBlockRegex)) {
-            // Find all connections where this block is the source
-            const outConnections = this.connections.filter(conn => 
-                conn.sourceBlockId === block.id && conn.sourceConnector === 'out');
-            
-            // Sort connections by their visual order (top to bottom)
-            outConnections.sort((a, b) => {
-                const blockA = this.blocks.find(b => b.id === a.destBlockId);
-                const blockB = this.blocks.find(b => b.id === b.destBlockId);
-                return (blockA?.y || 0) - (blockB?.y || 0);
-            });
-            
-            let childContent = "";
-            
-            // Generate code for each connected child block
-            for (const conn of outConnections) {
-                const childBlock = this.blocks.find(b => b.id === conn.destBlockId);
-                if (childBlock) {
-                    // Check if we've already processed this block to avoid infinite recursion
-                    if (!processedBlocks.has(childBlock.id)) {
-                        childContent += this.generateBlockCode(childBlock, processedBlocks) + "\n";
-                    } else {
-                        console.warn(`Skipping already processed block ${childBlock.id} to avoid infinite recursion`);
-                    }
-                }
+        if (blockDef.template && typeof blockDef.template === 'function') {
+            try {
+                return blockDef.template(block);
+            } catch (error) {
+                console.error(`Error in template for ${block.id}:`, error);
+                return `/* Error generating code: ${error.message} */`;
             }
-            
-            // Replace the child blocks placeholder with the generated content
-            code = code.replace(childBlockRegex, childContent);
         }
         
         return code;
     };
     
-    // Fix for processing input connections
-    ScriptFlow.prototype.processBlockInputConnections = function(block, code, processedBlocks) {
+    // Fix for processChildBlocksContent to prevent infinite recursion
+    window.scriptFlow.processChildBlocksContent = function(block, code, processedBlocks = new Set()) {
+        // Find all child block placeholders in the code template
+        const childBlockRegex = /\{\{CHILD_BLOCKS\}\}/g;
+        
+        if (!code.match(childBlockRegex)) {
+            return code;
+        }
+        
+        // Find all connections where this block is the source
+        const outConnections = this.connections.filter(conn => 
+            conn.sourceBlockId === block.id && conn.sourceConnector === 'out');
+        
+        // Sort connections by their visual order (top to bottom)
+        outConnections.sort((a, b) => {
+            const blockA = this.blocks.find(b => b.id === a.destBlockId);
+            const blockB = this.blocks.find(b => b.id === b.destBlockId);
+            return (blockA?.y || 0) - (blockB?.y || 0);
+        });
+        
+        let childContent = "";
+        
+        // Generate code for each connected child block
+        for (const conn of outConnections) {
+            const childBlock = this.blocks.find(b => b.id === conn.destBlockId);
+            if (childBlock) {
+                // Check if we've already processed this block to avoid infinite recursion
+                if (!processedBlocks.has(childBlock.id)) {
+                    const newProcessedBlocks = new Set(processedBlocks);
+                    childContent += this.generateBlockCode(childBlock, newProcessedBlocks) + "\n";
+                } else {
+                    console.warn(`Skipping already processed block ${childBlock.id} to avoid infinite recursion`);
+                }
+            }
+        }
+        
+        // Replace the child blocks placeholder with the generated content
+        code = code.replace(childBlockRegex, childContent);
+        
+        return code;
+    };
+    
+    // Fix for processBlockInputConnections
+    window.scriptFlow.processBlockInputConnections = function(block, code, processedBlocks = new Set()) {
+        if (!block) return code;
+        
         // Get all input connections for this block
         const inputConnections = this.connections.filter(conn => 
             conn.destBlockId === block.id && conn.destConnector !== 'in');
-            
+        
         for (const conn of inputConnections) {
             const sourceBlock = this.blocks.find(b => b.id === conn.sourceBlockId);
             if (!sourceBlock) continue;
+            
+            // Skip if there's a circular reference
+            if (processedBlocks.has(sourceBlock.id)) {
+                console.warn(`Skipping circular reference from ${block.id} to ${sourceBlock.id}`);
+                continue;
+            }
             
             // Get the block definition for the source block
             const sourceBlockDef = this.getBlockDefinition(sourceBlock.category, sourceBlock.type);
             if (!sourceBlockDef) continue;
             
-            // Find the output definition for the source connector
-            const outputDef = sourceBlockDef.outputs?.find(o => o.name === conn.sourceConnector);
-            if (!outputDef) continue;
+            // For value-producing blocks, generate their code
+            const newProcessedBlocks = new Set(processedBlocks);
+            newProcessedBlocks.add(sourceBlock.id);
             
-            // Check if this is a block that produces a value
-            if (outputDef.type === 'value' || outputDef.type === 'variable') {
-                // Create a reference to use the source block's output
-                let outputValue;
-                
-                if (outputDef.code) {
-                    // If the output has custom code, use it
-                    outputValue = outputDef.code;
-                    
-                    // Replace options in the output code
-                    for (const [key, value] of Object.entries(sourceBlock.options || {})) {
-                        const placeholder = new RegExp(`\\{\\{${key.toUpperCase()}\\}\\}`, 'g');
-                        outputValue = outputValue.replace(placeholder, value);
-                    }
-                } else {
-                    // Default to using the block's ID as variable name
-                    outputValue = sourceBlock.id;
-                }
-                
-                // Replace the input placeholder in the code template
-                const placeholder = new RegExp(`\\{\\{${conn.destConnector.toUpperCase()}\\}\\}`, 'g');
-                code = code.replace(placeholder, outputValue);
+            let sourceValue;
+            // If this is a simple block, use its value directly
+            if (sourceBlock.category === 'inputs' || sourceBlock.category === 'variables') {
+                sourceValue = this.generateBlockCode(sourceBlock, newProcessedBlocks);
+            } else {
+                // For more complex blocks, use their ID as reference
+                sourceValue = sourceBlock.id;
             }
+            
+            // Replace the input placeholder in the code template
+            const placeholder = new RegExp(`\\{\\{${conn.destConnector.toUpperCase()}\\}\\}`, 'g');
+            code = code.replace(placeholder, sourceValue);
         }
         
         // Handle explicit input values for unconnected inputs
         const blockDef = this.getBlockDefinition(block.category, block.type);
         if (blockDef && blockDef.inputs) {
-            for (const input of blockDef.inputs) {
+            for (const inputName of blockDef.inputs) {
                 // Check if this input is not connected
-                const isConnected = inputConnections.some(conn => conn.destConnector === input.name);
+                const isConnected = inputConnections.some(conn => conn.destConnector === inputName);
                 
-                if (!isConnected && block.inputs && block.inputs[input.name] !== undefined) {
+                if (!isConnected && block.inputs && block.inputs[inputName] !== undefined) {
                     // Replace the input placeholder with the direct value
-                    const placeholder = new RegExp(`\\{\\{${input.name.toUpperCase()}\\}\\}`, 'g');
-                    code = code.replace(placeholder, block.inputs[input.name]);
+                    const placeholder = new RegExp(`\\{\\{${inputName.toUpperCase()}\\}\\}`, 'g');
+                    code = code.replace(placeholder, block.inputs[inputName]);
                 }
             }
         }
@@ -4460,17 +4470,39 @@ function applyScriptFlowFixes() {
         return code;
     };
     
+    // Helper method to get block definition
+    window.scriptFlow.getBlockDefinition = function(category, type) {
+        return this.blockLibrary?.[category]?.blocks?.[type];
+    };
+    
     // Fix for the main code generation function
-    ScriptFlow.prototype.generateCode = function() {
-        const rootBlocks = this.findRootBlocks();
+    window.scriptFlow.generateCode = function() {
+        // Find root blocks (blocks with no incoming connections to their 'in' connector)
+        const rootBlocks = this.blocks.filter(block => {
+            // A root block doesn't have any connection to its 'in' connector
+            return !this.connections.some(conn => 
+                conn.destBlockId === block.id && conn.destConnector === 'in'
+            );
+        });
+        
         let generatedCode = "";
         
         // Generate code for each root block using a fresh set for tracking processed blocks
         for (const block of rootBlocks) {
-            generatedCode += this.generateBlockCode(block, new Set()) + "\n";
+            generatedCode += this.generateBlockCode(block, new Set()) + "\n\n";
         }
         
-        return generatedCode;
+        return generatedCode.trim();
+    };
+    
+    // Fix for findRootBlocks
+    window.scriptFlow.findRootBlocks = function() {
+        return this.blocks.filter(block => {
+            // A root block doesn't have any connection to its 'in' connector
+            return !this.connections.some(conn => 
+                conn.destBlockId === block.id && conn.destConnector === 'in'
+            );
+        });
     };
     
     console.log("ScriptFlow fixes applied successfully");
