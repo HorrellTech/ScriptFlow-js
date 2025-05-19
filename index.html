@@ -6,6 +6,7 @@
     <title>ScriptFlow - Visual JavaScript Scripting</title>
     <link rel="stylesheet" href="css/scriptflow.css">
     <link rel="stylesheet" href="css/scriptflow-blocks.css">
+    <link rel="stylesheet" href="css/mobile.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/codemirror.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/theme/monokai.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/addon/scroll/simplescrollbars.min.css">
@@ -135,6 +136,43 @@
             gap: 10px;
             margin: 20px 0;
         }
+
+        /* Add mobile-specific styles for the landing page */
+        @media (max-width: 768px) {
+            main {
+                max-width: 100%;
+                margin: 10px;
+                padding: 15px;
+            }
+            
+            .action-buttons {
+                flex-direction: column;
+            }
+            
+            .action-buttons button {
+                width: 100%;
+            }
+            
+            .feature-section {
+                flex-direction: column;
+            }
+            
+            .feature-card {
+                flex: none;
+            }
+            
+            .theme-toggle {
+                width: 36px;
+                height: 36px;
+                top: 8px;
+                right: 8px;
+            }
+            
+            button {
+                padding: 12px 20px;
+                min-height: 44px; /* Better touch target */
+            }
+        }
     </style>
 </head>
 <body>
@@ -200,6 +238,9 @@
         
         // Apply fixes first
         applyScriptFlowFixes();
+
+        // Apply mobile enhancements
+        enhanceScriptFlowForMobile();
         
         // Theme toggle functionality
         const themeToggle = document.getElementById('theme-toggle');

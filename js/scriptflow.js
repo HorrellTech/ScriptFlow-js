@@ -4507,3 +4507,331 @@ function applyScriptFlowFixes() {
     
     console.log("ScriptFlow fixes applied successfully");
 }
+
+/**
+ * Mobile support enhancements for ScriptFlow
+ * Adds touch gestures, responsive layout, and mobile-friendly UI
+ */
+
+function enhanceScriptFlowForMobile() {
+    if (!window.scriptFlow) {
+        console.error("ScriptFlow not initialized. Can't add mobile support.");
+        return;
+    }
+    
+    const sf = window.scriptFlow;
+    
+    // Add mobile detection
+    sf.isMobileDevice = function() {
+        return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || 
+               (window.matchMedia && window.matchMedia('(max-width: 768px)').matches);
+    };
+    
+    // Create collapsible palette
+    sf.initMobilePalette = function() {
+        // Create toggle button
+        const toggleBtn = document.createElement('div');
+        toggleBtn.className = 'sf-palette-toggle';
+        this.canvas.parentElement.appendChild(toggleBtn);
+        
+        // Add toggle functionality
+        toggleBtn.addEventListener('click', () => {
+            this.palette.classList.toggle('open');
+        });
+        
+        // Close palette when clicking on canvas
+        this.canvas.addEventListener('click', () => {
+            if (this.isMobileDevice() && this.palette.classList.contains('open')) {
+                this.palette.classList.remove('open');
+            }
+        });
+        
+        // Initialize palette state
+        if (this.isMobileDevice()) {
+            // Start with closed palette on mobile
+            this.palette.classList.remove('open');
+        } else {
+            // Always open on desktop
+            this.palette.classList.add('open');
+        }
+    };
+    
+    // Enhanced touch support for block dragging
+    sf.enhanceTouchDragging = function() {
+        // Modify the startBlockDrag for better touch support
+        const originalStartBlockDrag = this.startBlockDrag;
+        this.startBlockDrag = function(e, categoryKey, blockKey) {
+            // For touch events, extract the touch data
+            if (e.touches) {
+                const touch = e.touches[0];
+                // Create a simulated mouse event
+                const simulatedEvent = {
+                    clientX: touch.clientX,
+                    clientY: touch.clientY,
+                    preventDefault: () => e.preventDefault()
+                };
+                originalStartBlockDrag.call(this, simulatedEvent, categoryKey, blockKey);
+            } else {
+                // Normal mouse event
+                originalStartBlockDrag.call(this, e, categoryKey, blockKey);
+            }
+        };
+        
+        // Update existing block drag for touch
+        const originalStartExistingBlockDrag = this.startExistingBlockDrag;
+        this.startExistingBlockDrag = function(e, blockId) {
+            if (e.touches) {
+                const touch = e.touches[0];
+                const simulatedEvent = {
+                    clientX: touch.clientX,
+                    clientY: touch.clientY,
+                    preventDefault: () => e.preventDefault(),
+                    stopPropagation: () => e.stopPropagation()
+                };
+                originalStartExistingBlockDrag.call(this, simulatedEvent, blockId);
+            } else {
+                originalStartExistingBlockDrag.call(this, e, blockId);
+            }
+        };
+        
+        // Enhance canvas pan for touch
+        const originalStartCanvasPan = this.startCanvasPan;
+        this.startCanvasPan = function(e) {
+            if (e.touches) {
+                const touch = e.touches[0];
+                this.isPanning = true;
+                this.lastPanX = touch.clientX;
+                this.lastPanY = touch.clientY;
+                this.canvas.style.cursor = 'grabbing';
+            } else {
+                originalStartCanvasPan.call(this, e);
+            }
+        };
+    };
+    
+    // Add touch gestures to canvas
+    sf.addTouchGestures = function() {
+        // Create a touch overlay for the canvas
+        const touchOverlay = document.createElement('div');
+        touchOverlay.className = 'sf-touch-overlay';
+        this.canvas.parentElement.appendChild(touchOverlay);
+        
+        // Touch variables for tracking gesture state
+        let touchStartDistance = 0;
+        let touchStartTime = 0;
+        let lastTouchX = 0;
+        let lastTouchY = 0;
+        let isTouching = false;
+        
+        // Handle touch start
+        touchOverlay.addEventListener('touchstart', (e) => {
+            // If we have exactly two touches, prepare for pinch zoom
+            if (e.touches.length === 2) {
+                const touch1 = e.touches[0];
+                const touch2 = e.touches[1];
+                
+                // Calculate initial distance between touches
+                touchStartDistance = Math.hypot(
+                    touch2.clientX - touch1.clientX,
+                    touch2.clientY - touch1.clientY
+                );
+                
+                // Calculate center point for zooming
+                const centerX = (touch1.clientX + touch2.clientX) / 2;
+                const centerY = (touch1.clientY + touch2.clientY) / 2;
+                const canvasRect = this.canvas.parentElement.getBoundingClientRect();
+                
+                // Convert to canvas coordinates
+                this.zoomCenterX = (centerX - canvasRect.left) / this.canvasScale;
+                this.zoomCenterY = (centerY - canvasRect.top) / this.canvasScale;
+                
+                e.preventDefault();
+            } 
+            // Single touch for panning
+            else if (e.touches.length === 1) {
+                const touch = e.touches[0];
+                lastTouchX = touch.clientX;
+                lastTouchY = touch.clientY;
+                touchStartTime = Date.now();
+                isTouching = true;
+                
+                // Only handle panning if not over a block
+                const elementUnderTouch = document.elementFromPoint(touch.clientX, touch.clientY);
+                if (!elementUnderTouch.closest('.sf-block') && 
+                    !elementUnderTouch.closest('.sf-connector-hitbox')) {
+                    this.startCanvasPan(e);
+                }
+            }
+        });
+        
+        // Handle touch move
+        touchOverlay.addEventListener('touchmove', (e) => {
+            // Pinch zoom with two fingers
+            if (e.touches.length === 2) {
+                const touch1 = e.touches[0];
+                const touch2 = e.touches[1];
+                
+                // Calculate new distance and determine zoom direction
+                const currentDistance = Math.hypot(
+                    touch2.clientX - touch1.clientX,
+                    touch2.clientY - touch1.clientY
+                );
+                
+                // Calculate zoom delta based on distance change
+                const zoomFactor = currentDistance / touchStartDistance - 1;
+                const zoomDelta = zoomFactor * 0.3; // Scale the zoom effect
+                
+                // Apply zoom at the center point
+                if (Math.abs(zoomDelta) > 0.01) {
+                    this.zoomCanvasAroundPoint(zoomDelta, this.zoomCenterX, this.zoomCenterY);
+                    touchStartDistance = currentDistance; // Update for next move
+                }
+                
+                e.preventDefault();
+            } 
+            // Pan with one finger
+            else if (e.touches.length === 1 && this.isPanning) {
+                // Handle pan movement
+                const touch = e.touches[0];
+                
+                // Update canvas position
+                const deltaX = (touch.clientX - this.lastPanX) / this.canvasScale;
+                const deltaY = (touch.clientY - this.lastPanY) / this.canvasScale;
+                
+                this.canvasOffsetX += deltaX;
+                this.canvasOffsetY += deltaY;
+                
+                this.canvas.style.transform = `scale(${this.canvasScale}) translate(${this.canvasOffsetX}px, ${this.canvasOffsetY}px)`;
+                
+                this.lastPanX = touch.clientX;
+                this.lastPanY = touch.clientY;
+                
+                e.preventDefault();
+            }
+        });
+        
+        // Handle touch end
+        touchOverlay.addEventListener('touchend', (e) => {
+            // End of two-finger gesture
+            if (e.touches.length < 2) {
+                touchStartDistance = 0;
+            }
+            
+            // End of panning
+            if (e.touches.length === 0 && this.isPanning) {
+                this.isPanning = false;
+                this.canvas.style.cursor = 'default';
+                
+                // Detect quick tap for context menu (tap and hold)
+                const touchDuration = Date.now() - touchStartTime;
+                if (touchDuration > 500 && touchDuration < 1000 && isTouching) {
+                    // Create a simulated right-click event
+                    const contextEvent = new MouseEvent('contextmenu', {
+                        bubbles: true,
+                        cancelable: true,
+                        clientX: lastTouchX,
+                        clientY: lastTouchY
+                    });
+                    
+                    // Dispatch the context menu event
+                    document.elementFromPoint(lastTouchX, lastTouchY).dispatchEvent(contextEvent);
+                }
+            }
+            
+            isTouching = false;
+        });
+    };
+    
+    // Enhance connection handling for touch
+    sf.enhanceTouchConnections = function() {
+        // Enhance start connection drag
+        const originalStartConnectionDrag = this.startConnectionDrag;
+        this.startConnectionDrag = function(e, blockId, connectorType, connectorName) {
+            if (e.touches) {
+                const touch = e.touches[0];
+                const simulatedEvent = {
+                    preventDefault: () => e.preventDefault(),
+                    clientX: touch.clientX,
+                    clientY: touch.clientY
+                };
+                originalStartConnectionDrag.call(this, simulatedEvent, blockId, connectorType, connectorName);
+            } else {
+                originalStartConnectionDrag.call(this, e, blockId, connectorType, connectorName);
+            }
+        };
+        
+        // Update temp connection for touch
+        const originalUpdateTempConnection = this.updateTempConnection;
+        this.updateTempConnection = function(e) {
+            if (e.touches) {
+                const touch = e.touches[0];
+                const simulatedEvent = {
+                    clientX: touch.clientX,
+                    clientY: touch.clientY
+                };
+                originalUpdateTempConnection.call(this, simulatedEvent);
+            } else {
+                originalUpdateTempConnection.call(this, e);
+            }
+        };
+        
+        // Finish connection for touch
+        const originalFinishConnection = this.finishConnection;
+        this.finishConnection = function(e) {
+            if (e.changedTouches) {
+                const touch = e.changedTouches[0];
+                const simulatedEvent = {
+                    clientX: touch.clientX,
+                    clientY: touch.clientY
+                };
+                originalFinishConnection.call(this, simulatedEvent);
+            } else {
+                originalFinishConnection.call(this, e);
+            }
+        };
+    };
+    
+    // Add responsive layout adjustments
+    sf.makeResponsive = function() {
+        // Update the canvas container to handle different screen sizes
+        const updateLayout = () => {
+            const isMobile = this.isMobileDevice();
+            
+            // Apply mobile class to editor if needed
+            if (isMobile) {
+                this.editor.classList.add('sf-mobile');
+                this.modal.classList.add('sf-mobile-modal');
+            } else {
+                this.editor.classList.remove('sf-mobile');
+                this.modal.classList.remove('sf-mobile-modal');
+            }
+            
+            // Make sure palette has correct state
+            if (isMobile) {
+                // Keep palette closed by default on mobile
+                this.palette.classList.remove('open');
+            } else {
+                // Always open on desktop
+                this.palette.classList.add('open');
+            }
+            
+            // Update all connections after layout change
+            setTimeout(() => this.updateAllConnections(), 50);
+        };
+        
+        // Call initially
+        updateLayout();
+        
+        // Add resize listener
+        window.addEventListener('resize', updateLayout);
+    };
+    
+    // Initialize all mobile enhancements
+    sf.initMobilePalette();
+    sf.enhanceTouchDragging();
+    sf.addTouchGestures();
+    sf.enhanceTouchConnections();
+    sf.makeResponsive();
+    
+    console.log("ScriptFlow mobile enhancements applied successfully");
+}
