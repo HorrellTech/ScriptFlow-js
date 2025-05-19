@@ -4013,127 +4013,298 @@ class ScriptFlow {
 }
 
 /**
- * Initialize a sample flow for demonstration purposes
+ * Creates a simple demo flow for ScriptFlow
+ */
+/**
+ * Creates a demo flow showcasing classes, constructors, and math functions
  */
 function initializeDemoFlow() {
-    // Make sure ScriptFlow is available
     if (!window.scriptFlow) {
         console.error('ScriptFlow not initialized');
         return;
     }
-    
-    // Clear any existing blocks/connections
+
+    // Clear the canvas
     window.scriptFlow.clearCanvas();
-    
-    // Create blocks with specific IDs to reference them later for connections
-    const blocks = [
-        // Event handler block
-        { id: 'btn1', type: 'addEventListener', category: 'dom', x: 100, y: 100, 
-        options: { }, inputs: { 
-            element: "document.getElementById('demo-button')", 
-            eventType: "'click'" 
+
+    try {
+        // Define block positions for better organization
+        const startX = 100;
+        const startY = 100;
+        const blockSpacing = 180;
+
+        // Create blocks with unique IDs
+        const blocks = [
+            // Class definition block
+            {
+                id: 'class1',
+                type: 'class',
+                category: 'basics',
+                x: startX,
+                y: startY,
+                options: {
+                    name: 'Calculator',
+                    extends: ''
+                }
+            },
+            
+            // Constructor block for the class
+            {
+                id: 'constructor1',
+                type: 'constructor',
+                category: 'basics',
+                x: startX + 350,
+                y: startY,
+                options: {
+                    parameters: [
+                        { name: 'initialValue', value: '' }
+                    ]
+                }
+            },
+            
+            // Variable declaration in constructor
+            {
+                id: 'var1',
+                type: 'declare',
+                category: 'variables',
+                x: startX + 350,
+                y: startY + blockSpacing,
+                options: {
+                    name: 'this.value',
+                    type: 'let'
+                },
+                inputs: {
+                    value: 'initialValue'
+                }
+            },
+            
+            // Add a method to the class
+            {
+                id: 'method1',
+                type: 'function',
+                category: 'basics',
+                x: startX + 350,
+                y: startY + blockSpacing * 2,
+                options: {
+                    name: 'add',
+                    parameters: [
+                        { name: 'a', value: '' },
+                        { name: 'b', value: '' }
+                    ]
+                }
+            },
+            
+            // Arithmetic operation in method
+            {
+                id: 'op1',
+                type: 'arithmetic',
+                category: 'math',
+                x: startX + 350,
+                y: startY + blockSpacing * 3,
+                options: {
+                    operator: '+'
+                },
+                inputs: {
+                    value1: 'a',
+                    value2: 'b'
+                }
+            },
+            
+            // Return statement for the method
+            {
+                id: 'return1',
+                type: 'return',
+                category: 'functions',
+                x: startX + 350,
+                y: startY + blockSpacing * 4,
+                inputs: {
+                    value: 'op1'
+                }
+            },
+            
+            // Instantiate the class
+            {
+                id: 'var2',
+                type: 'declare',
+                category: 'variables',
+                x: startX,
+                y: startY + blockSpacing * 5,
+                options: {
+                    name: 'calc',
+                    type: 'const'
+                },
+                inputs: {
+                    value: 'new Calculator(10)'
+                }
+            },
+            
+            // Call the add method
+            {
+                id: 'call1',
+                type: 'call',
+                category: 'functions',
+                x: startX,
+                y: startY + blockSpacing * 6,
+                options: {
+                    name: 'calc.add'
+                },
+                inputs: {
+                    params: '5, 3'
+                }
+            },
+            
+            // Log the result
+            {
+                id: 'log1',
+                type: 'consoleLog',
+                category: 'utilities',
+                x: startX,
+                y: startY + blockSpacing * 7,
+                options: {
+                    label: 'Result'
+                },
+                inputs: {
+                    message: 'call1'
+                }
+            }
+        ];
+        
+        // Add blocks to canvas
+        const blockElements = {};
+        
+        for (const blockData of blocks) {
+            // Check if the block type exists before creating it
+            if (!scriptFlow.blockLibrary[blockData.category] || 
+                !scriptFlow.blockLibrary[blockData.category].blocks[blockData.type]) {
+                console.warn(`Block type not found: ${blockData.category}.${blockData.type}`);
+                continue;
+            }
+            
+            // Create the block
+            scriptFlow.blocks.push(blockData);
+            
+            // Create visual element
+            const blockEl = scriptFlow.createBlockElement(blockData);
+            scriptFlow.canvas.appendChild(blockEl);
+            
+            // Store for later reference
+            blockElements[blockData.id] = blockEl;
         }
-        },
         
-        // Variable declaration
-        { id: 'var1', type: 'declare', category: 'variable', x: 100, y: 250, 
-        options: { name: 'message', type: 'const' }, 
-        inputs: { value: "'Hello from ScriptFlow!'" }
-        },
+        // Define connections
+        const connections = [
+            // Class structure connections
+            {
+                id: 'conn1',
+                sourceBlockId: 'class1',
+                sourceConnector: 'out',
+                destBlockId: 'constructor1',
+                destConnector: 'in'
+            },
+            {
+                id: 'conn2', 
+                sourceBlockId: 'class1',
+                sourceConnector: 'out',
+                destBlockId: 'method1',
+                destConnector: 'in'
+            },
+            
+            // Constructor flow
+            {
+                id: 'conn3',
+                sourceBlockId: 'constructor1',
+                sourceConnector: 'out',
+                destBlockId: 'var1',
+                destConnector: 'in'
+            },
+            
+            // Method flow
+            {
+                id: 'conn4',
+                sourceBlockId: 'method1',
+                sourceConnector: 'out',
+                destBlockId: 'op1',
+                destConnector: 'in'
+            },
+            {
+                id: 'conn5',
+                sourceBlockId: 'op1',
+                sourceConnector: 'out',
+                destBlockId: 'return1',
+                destConnector: 'in'
+            },
+            
+            // Main flow
+            {
+                id: 'conn6',
+                sourceBlockId: 'var2',
+                sourceConnector: 'out',
+                destBlockId: 'call1',
+                destConnector: 'in'
+            },
+            {
+                id: 'conn7',
+                sourceBlockId: 'call1',
+                sourceConnector: 'out',
+                destBlockId: 'log1',
+                destConnector: 'in'
+            },
+            
+            // Data connections
+            {
+                id: 'conn8',
+                sourceBlockId: 'op1',
+                sourceConnector: 'result',
+                destBlockId: 'return1',
+                destConnector: 'value'
+            },
+            {
+                id: 'conn9',
+                sourceBlockId: 'call1',
+                sourceConnector: 'result',
+                destBlockId: 'log1',
+                destConnector: 'message'
+            }
+        ];
         
-        // Console log block
-        { id: 'log1', type: 'consoleLog', category: 'utilities', x: 100, y: 350, 
-        options: { label: 'Message' }, inputs: { }
-        },
-        
-        // Alert block
-        { id: 'alert1', type: 'alert', category: 'utilities', x: 100, y: 450, 
-        options: { }, inputs: { }
-        },
-        
-        // DOM manipulation 
-        { id: 'dom1', type: 'querySelector', category: 'dom', x: 400, y: 180, 
-        options: { }, inputs: { selector: "'.result'" }
-        },
-        
-        // Set text content
-        { id: 'text1', type: 'textContent', category: 'dom', x: 400, y: 300, 
-        options: { }, inputs: { }
-        },
-        
-        // Counter variable
-        { id: 'counter', type: 'declare', category: 'variable', x: 400, y: 400, 
-        options: { name: 'counter', type: 'let' }, inputs: { value: '0' }
-        },
-        
-        // Increment counter
-        { id: 'inc1', type: 'arithmetic', category: 'operators', x: 400, y: 500, 
-        options: { operator: '+' }, inputs: { 
-            leftOperand: 'counter', 
-            rightOperand: '1' 
+        // Create connections
+        for (const conn of connections) {
+            // Verify blocks exist
+            const sourceBlock = scriptFlow.blocks.find(b => b.id === conn.sourceBlockId);
+            const destBlock = scriptFlow.blocks.find(b => b.id === conn.destBlockId);
+            
+            if (!sourceBlock || !destBlock) {
+                console.warn(`Cannot create connection: blocks don't exist (${conn.sourceBlockId} → ${conn.destBlockId})`);
+                continue;
+            }
+            
+            // Create the connection
+            scriptFlow.connections.push(conn);
+            
+            try {
+                scriptFlow.renderConnection(conn);
+            } catch (error) {
+                console.error(`Error rendering connection ${conn.id}:`, error);
+            }
         }
-        },
         
-        // Set counter value
-        { id: 'set1', type: 'set', category: 'variable', x: 400, y: 600, 
-        options: { name: 'counter' }, inputs: { }
+        // Generate code
+        try {
+            const code = scriptFlow.generateCode();
+            if (typeof scriptFlow.options.onCodeGenerated === 'function') {
+                scriptFlow.options.onCodeGenerated(code);
+            }
+            
+            scriptFlow.showNotification('Class demo loaded successfully', 'success');
+        } catch (error) {
+            console.error('Error generating code:', error);
+            scriptFlow.showNotification('Error generating demo code: ' + error.message, 'error');
         }
-    ];
-    
-    // Add all blocks to the workspace
-    blocks.forEach(blockData => {
-        const block = {
-        id: blockData.id,
-        type: blockData.type,
-        category: blockData.category,
-        x: blockData.x,
-        y: blockData.y,
-        options: blockData.options || {},
-        inputs: blockData.inputs || {}
-        };
-        
-        window.scriptFlow.blocks.push(block);
-        
-        // Create visual representation
-        const blockEl = window.scriptFlow.createBlockElement(block);
-        window.scriptFlow.canvas.appendChild(blockEl);
-    });
-    
-    // Create connections between blocks
-    const connections = [
-        // Flow connections (out -> in)
-        { id: 'conn1', sourceBlockId: 'btn1', sourceConnector: 'out', destBlockId: 'var1', destConnector: 'in' },
-        { id: 'conn2', sourceBlockId: 'var1', sourceConnector: 'out', destBlockId: 'log1', destConnector: 'in' },
-        { id: 'conn3', sourceBlockId: 'log1', sourceConnector: 'out', destBlockId: 'alert1', destConnector: 'in' },
-        { id: 'conn4', sourceBlockId: 'alert1', sourceConnector: 'out', destBlockId: 'dom1', destConnector: 'in' },
-        { id: 'conn5', sourceBlockId: 'dom1', sourceConnector: 'out', destBlockId: 'text1', destConnector: 'in' },
-        { id: 'conn6', sourceBlockId: 'text1', sourceConnector: 'out', destBlockId: 'counter', destConnector: 'in' },
-        { id: 'conn7', sourceBlockId: 'counter', sourceConnector: 'out', destBlockId: 'inc1', destConnector: 'in' },
-        { id: 'conn8', sourceBlockId: 'inc1', sourceConnector: 'out', destBlockId: 'set1', destConnector: 'in' },
-        
-        // Data connections
-        { id: 'conn9', sourceBlockId: 'var1', sourceConnector: 'value', destBlockId: 'log1', destConnector: 'message' },
-        { id: 'conn10', sourceBlockId: 'var1', sourceConnector: 'value', destBlockId: 'alert1', destConnector: 'message' },
-        { id: 'conn11', sourceBlockId: 'dom1', sourceConnector: 'element', destBlockId: 'text1', destConnector: 'element' },
-        { id: 'conn12', sourceBlockId: 'var1', sourceConnector: 'value', destBlockId: 'text1', destConnector: 'content' },
-        { id: 'conn13', sourceBlockId: 'inc1', sourceConnector: 'result', destBlockId: 'set1', destConnector: 'value' }
-    ];
-    
-    // Add all connections
-    connections.forEach(conn => {
-        window.scriptFlow.connections.push(conn);
-        window.scriptFlow.renderConnection(conn);
-    });
-    
-    // Generate code to show the output
-    const code = window.scriptFlow.generateCode();
-    if (typeof window.scriptFlow.options.onCodeGenerated === 'function') {
-        window.scriptFlow.options.onCodeGenerated(code);
+    } catch (error) {
+        console.error('Error creating demo flow:', error);
+        scriptFlow.showNotification('Error creating demo flow: ' + error.message, 'error');
     }
-    
-    // Show a notification that the demo has been loaded
-    window.scriptFlow.showNotification('Demo flow loaded', 'success');
-    }
+}
 
 /**
  * Global function to open the ScriptFlow modal
@@ -4145,4 +4316,162 @@ function openScriptFlowModal() {
         window.scriptFlow = new ScriptFlow();
         window.scriptFlow.openModal();
     }
+}
+
+
+
+// Apply these patches to the ScriptFlow class after it loads
+function applyScriptFlowFixes() {
+    if (!window.ScriptFlow) {
+        console.error("ScriptFlow class not found. Can't apply fixes.");
+        return;
+    }
+
+    // Fix for infinite recursion in code generation
+    ScriptFlow.prototype.generateBlockCode = function(block, processedBlocks = new Set()) {
+        // Guard against circular references
+        if (processedBlocks.has(block.id)) {
+            console.warn(`Circular reference detected for block ${block.id}. Skipping.`);
+            return "";
+        }
+        
+        // Add this block to the set of processed blocks
+        processedBlocks.add(block.id);
+        
+        // Get the block definition from the library
+        const blockDef = this.getBlockDefinition(block.category, block.type);
+        if (!blockDef) {
+            console.error(`Block definition not found for ${block.category}.${block.type}`);
+            return "";
+        }
+        
+        // Clone the code template
+        let code = blockDef.codeTemplate || "";
+        
+        // Process input connections for values
+        code = this.processBlockInputConnections(block, code, processedBlocks);
+        
+        // Process child blocks content recursively (like in if/else, loops, etc.)
+        code = this.processChildBlocksContent(block, code, processedBlocks);
+        
+        // Replace options in the template
+        code = this.replaceOptionsInTemplate(block, code);
+        
+        return code;
+    };
+    
+    // Fix for the recursion in processChildBlocksContent
+    ScriptFlow.prototype.processChildBlocksContent = function(block, code, processedBlocks) {
+        // Find all child block placeholders in the code template
+        const childBlockRegex = /\{\{CHILD_BLOCKS\}\}/g;
+        
+        if (code.match(childBlockRegex)) {
+            // Find all connections where this block is the source
+            const outConnections = this.connections.filter(conn => 
+                conn.sourceBlockId === block.id && conn.sourceConnector === 'out');
+            
+            // Sort connections by their visual order (top to bottom)
+            outConnections.sort((a, b) => {
+                const blockA = this.blocks.find(b => b.id === a.destBlockId);
+                const blockB = this.blocks.find(b => b.id === b.destBlockId);
+                return (blockA?.y || 0) - (blockB?.y || 0);
+            });
+            
+            let childContent = "";
+            
+            // Generate code for each connected child block
+            for (const conn of outConnections) {
+                const childBlock = this.blocks.find(b => b.id === conn.destBlockId);
+                if (childBlock) {
+                    // Check if we've already processed this block to avoid infinite recursion
+                    if (!processedBlocks.has(childBlock.id)) {
+                        childContent += this.generateBlockCode(childBlock, processedBlocks) + "\n";
+                    } else {
+                        console.warn(`Skipping already processed block ${childBlock.id} to avoid infinite recursion`);
+                    }
+                }
+            }
+            
+            // Replace the child blocks placeholder with the generated content
+            code = code.replace(childBlockRegex, childContent);
+        }
+        
+        return code;
+    };
+    
+    // Fix for processing input connections
+    ScriptFlow.prototype.processBlockInputConnections = function(block, code, processedBlocks) {
+        // Get all input connections for this block
+        const inputConnections = this.connections.filter(conn => 
+            conn.destBlockId === block.id && conn.destConnector !== 'in');
+            
+        for (const conn of inputConnections) {
+            const sourceBlock = this.blocks.find(b => b.id === conn.sourceBlockId);
+            if (!sourceBlock) continue;
+            
+            // Get the block definition for the source block
+            const sourceBlockDef = this.getBlockDefinition(sourceBlock.category, sourceBlock.type);
+            if (!sourceBlockDef) continue;
+            
+            // Find the output definition for the source connector
+            const outputDef = sourceBlockDef.outputs?.find(o => o.name === conn.sourceConnector);
+            if (!outputDef) continue;
+            
+            // Check if this is a block that produces a value
+            if (outputDef.type === 'value' || outputDef.type === 'variable') {
+                // Create a reference to use the source block's output
+                let outputValue;
+                
+                if (outputDef.code) {
+                    // If the output has custom code, use it
+                    outputValue = outputDef.code;
+                    
+                    // Replace options in the output code
+                    for (const [key, value] of Object.entries(sourceBlock.options || {})) {
+                        const placeholder = new RegExp(`\\{\\{${key.toUpperCase()}\\}\\}`, 'g');
+                        outputValue = outputValue.replace(placeholder, value);
+                    }
+                } else {
+                    // Default to using the block's ID as variable name
+                    outputValue = sourceBlock.id;
+                }
+                
+                // Replace the input placeholder in the code template
+                const placeholder = new RegExp(`\\{\\{${conn.destConnector.toUpperCase()}\\}\\}`, 'g');
+                code = code.replace(placeholder, outputValue);
+            }
+        }
+        
+        // Handle explicit input values for unconnected inputs
+        const blockDef = this.getBlockDefinition(block.category, block.type);
+        if (blockDef && blockDef.inputs) {
+            for (const input of blockDef.inputs) {
+                // Check if this input is not connected
+                const isConnected = inputConnections.some(conn => conn.destConnector === input.name);
+                
+                if (!isConnected && block.inputs && block.inputs[input.name] !== undefined) {
+                    // Replace the input placeholder with the direct value
+                    const placeholder = new RegExp(`\\{\\{${input.name.toUpperCase()}\\}\\}`, 'g');
+                    code = code.replace(placeholder, block.inputs[input.name]);
+                }
+            }
+        }
+        
+        return code;
+    };
+    
+    // Fix for the main code generation function
+    ScriptFlow.prototype.generateCode = function() {
+        const rootBlocks = this.findRootBlocks();
+        let generatedCode = "";
+        
+        // Generate code for each root block using a fresh set for tracking processed blocks
+        for (const block of rootBlocks) {
+            generatedCode += this.generateBlockCode(block, new Set()) + "\n";
+        }
+        
+        return generatedCode;
+    };
+    
+    console.log("ScriptFlow fixes applied successfully");
 }

@@ -188,6 +188,7 @@
     <script src="js/block-initialization.js"></script>
     <script src="js/scriptflow.js"></script>
     <script>
+
         // Initialize ScriptFlow
         window.scriptFlow = new ScriptFlow({
             onCodeGenerated: (code) => {
@@ -195,6 +196,10 @@
             },
             theme: localStorage.getItem('site-theme') === 'dark' ? 'dark' : 'light'
         });
+
+        
+        // Apply fixes first
+        applyScriptFlowFixes();
         
         // Theme toggle functionality
         const themeToggle = document.getElementById('theme-toggle');
@@ -226,6 +231,19 @@
                 }
             }
         });
+
+        // Load the demo flow when the page is loaded
+        /*document.addEventListener('DOMContentLoaded', () => {
+            // Add a longer delay to ensure ScriptFlow and block library are fully initialized
+            setTimeout(() => {
+                // Check if the block library is loaded before initializing demo
+                if (window.scriptFlow && window.scriptFlow.blockLibrary) {
+                    initializeDemoFlow();
+                } else {
+                    console.error('Block library not ready. Demo initialization skipped.');
+                }
+            }, 500); // Increased delay to 500ms
+        });*/
         
         // Tutorial button handler
         document.getElementById('tutorial-btn').addEventListener('click', () => {
