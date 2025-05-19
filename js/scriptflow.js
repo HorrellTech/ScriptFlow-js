@@ -4513,6 +4513,11 @@ function applyScriptFlowFixes() {
  * Adds touch gestures, responsive layout, and mobile-friendly UI
  */
 
+/**
+ * Mobile support enhancements for ScriptFlow
+ * Adds touch gestures, responsive layout, and mobile-friendly UI
+ */
+
 function enhanceScriptFlowForMobile() {
     if (!window.scriptFlow) {
         console.error("ScriptFlow not initialized. Can't add mobile support.");
@@ -4532,17 +4537,27 @@ function enhanceScriptFlowForMobile() {
         // Create toggle button
         const toggleBtn = document.createElement('div');
         toggleBtn.className = 'sf-palette-toggle';
+        toggleBtn.innerHTML = '&#9776;'; // Hamburger menu icon
         this.canvas.parentElement.appendChild(toggleBtn);
         
         // Add toggle functionality
-        toggleBtn.addEventListener('click', () => {
+        toggleBtn.addEventListener('click', (e) => {
+            e.stopPropagation(); // Prevent canvas click
             this.palette.classList.toggle('open');
+            
+            // Update toggle button text
+            if (this.palette.classList.contains('open')) {
+                toggleBtn.innerHTML = '&larr;'; // Left arrow when open
+            } else {
+                toggleBtn.innerHTML = '&#9776;'; // Hamburger when closed
+            }
         });
         
-        // Close palette when clicking on canvas
+        // Close palette when clicking on canvas - but only on mobile
         this.canvas.addEventListener('click', () => {
             if (this.isMobileDevice() && this.palette.classList.contains('open')) {
                 this.palette.classList.remove('open');
+                toggleBtn.innerHTML = '&#9776;'; // Update icon
             }
         });
         
@@ -4586,7 +4601,8 @@ function enhanceScriptFlowForMobile() {
                     clientX: touch.clientX,
                     clientY: touch.clientY,
                     preventDefault: () => e.preventDefault(),
-                    stopPropagation: () => e.stopPropagation()
+                    stopPropagation: () => e.stopPropagation(),
+                    button: 0 // Simulate left mouse button
                 };
                 originalStartExistingBlockDrag.call(this, simulatedEvent, blockId);
             } else {
@@ -4657,8 +4673,9 @@ function enhanceScriptFlowForMobile() {
                 
                 // Only handle panning if not over a block
                 const elementUnderTouch = document.elementFromPoint(touch.clientX, touch.clientY);
-                if (!elementUnderTouch.closest('.sf-block') && 
-                    !elementUnderTouch.closest('.sf-connector-hitbox')) {
+                if (elementUnderTouch && !elementUnderTouch.closest('.sf-block') && 
+                    !elementUnderTouch.closest('.sf-connector-hitbox') &&
+                    !elementUnderTouch.closest('.sf-palette-toggle')) {
                     this.startCanvasPan(e);
                 }
             }
@@ -4734,7 +4751,7 @@ function enhanceScriptFlowForMobile() {
                     });
                     
                     // Dispatch the context menu event
-                    document.elementFromPoint(lastTouchX, lastTouchY).dispatchEvent(contextEvent);
+                    document.elementFromPoint(lastTouchX, lastTouchY)?.dispatchEvent(contextEvent);
                 }
             }
             
@@ -4793,6 +4810,20 @@ function enhanceScriptFlowForMobile() {
     
     // Add responsive layout adjustments
     sf.makeResponsive = function() {
+        // Fix missing property panel in constructor if it doesn't exist
+        if (!this.propertyPanel) {
+            this.propertyPanel = document.createElement('div');
+            this.propertyPanel.className = 'sf-property-panel';
+            this.propertyPanel.innerHTML = `
+                <div class="sf-property-header">
+                    <h3>Properties</h3>
+                    <button class="sf-button sf-icon-button" id="sf-close-properties">×</button>
+                </div>
+                <div class="sf-property-content" id="sf-property-content"></div>
+            `;
+            this.editor.appendChild(this.propertyPanel);
+        }
+        
         // Update the canvas container to handle different screen sizes
         const updateLayout = () => {
             const isMobile = this.isMobileDevice();
@@ -4800,20 +4831,35 @@ function enhanceScriptFlowForMobile() {
             // Apply mobile class to editor if needed
             if (isMobile) {
                 this.editor.classList.add('sf-mobile');
-                this.modal.classList.add('sf-mobile-modal');
+                if (this.modal) this.modal.classList.add('sf-mobile-modal');
             } else {
                 this.editor.classList.remove('sf-mobile');
-                this.modal.classList.remove('sf-mobile-modal');
+                if (this.modal) this.modal.classList.remove('sf-mobile-modal');
             }
             
-            // Make sure palette has correct state
-            if (isMobile) {
-                // Keep palette closed by default on mobile
-                this.palette.classList.remove('open');
-            } else {
-                // Always open on desktop
-                this.palette.classList.add('open');
+            // Make sure palette has correct state but don't change if user has toggled
+            if (isMobile && !document.querySelector('.sf-palette-toggle')) {
+                // Force proper initialization
+                this.initMobilePalette();
             }
+            
+            // Fix canvas visibility issue in mobile
+            const canvasContainer = this.canvas.parentElement;
+            if (canvasContainer) {
+                canvasContainer.style.overflow = 'hidden';
+                canvasContainer.style.display = 'block';
+                canvasContainer.style.flex = '1';
+                canvasContainer.style.position = 'relative';
+                canvasContainer.style.width = '100%';
+                canvasContainer.style.height = isMobile ? 'calc(100vh - 120px)' : '100%';
+            }
+            
+            // Make sure canvas is visible
+            this.canvas.style.display = 'block';
+            this.canvas.style.position = 'absolute';
+            this.canvas.style.width = '5000px';  // Large canvas size
+            this.canvas.style.height = '5000px';
+            this.canvas.style.transformOrigin = '0 0';
             
             // Update all connections after layout change
             setTimeout(() => this.updateAllConnections(), 50);
@@ -4826,12 +4872,122 @@ function enhanceScriptFlowForMobile() {
         window.addEventListener('resize', updateLayout);
     };
     
+    // Apply mobile specific CSS
+    sf.applyMobileStyles = function() {
+        const styleId = 'sf-mobile-styles';
+        
+        // Only add once
+        if (document.getElementById(styleId)) return;
+        
+        const style = document.createElement('style');
+        style.id = styleId;
+        style.textContent = `
+            /* Mobile styles for ScriptFlow */
+            @media (max-width: 768px) {
+                .sf-editor {
+                    width: 100% !important;
+                    height: 100% !important;
+                    max-width: none !important;
+                    display: flex !important;
+                    flex-direction: column !important;
+                    overflow: hidden !important;
+                }
+                
+                .sf-header, .sf-footer {
+                    flex-shrink: 0;
+                }
+                
+                .sf-canvas-container {
+                    flex: 1 !important;
+                    position: relative !important;
+                    overflow: hidden !important;
+                }
+                
+                .sf-palette {
+                    position: fixed !important;
+                    left: 0 !important;
+                    top: 0 !important;
+                    bottom: 0 !important;
+                    width: 80% !important;
+                    max-width: 300px !important;
+                    height: 100% !important;
+                    z-index: 1000 !important;
+                    transform: translateX(-100%) !important;
+                    transition: transform 0.3s ease !important;
+                    box-shadow: 0 0 15px rgba(0,0,0,0.3) !important;
+                    overflow-y: auto !important;
+                }
+                
+                .sf-palette.open {
+                    transform: translateX(0) !important;
+                }
+                
+                .sf-palette-toggle {
+                    position: fixed !important;
+                    left: 10px !important;
+                    top: 70px !important;
+                    width: 40px !important;
+                    height: 40px !important;
+                    background: var(--sf-panel-bg) !important;
+                    border: 1px solid var(--sf-panel-border) !important;
+                    border-radius: 4px !important;
+                    display: flex !important;
+                    align-items: center !important;
+                    justify-content: center !important;
+                    z-index: 1001 !important;
+                    cursor: pointer !important;
+                    font-size: 20px !important;
+                    box-shadow: 0 2px 8px rgba(0,0,0,0.2) !important;
+                }
+                
+                .sf-touch-overlay {
+                    position: absolute !important;
+                    top: 0 !important;
+                    left: 0 !important;
+                    width: 100% !important;
+                    height: 100% !important;
+                    z-index: 10 !important;
+                    touch-action: none !important;
+                }
+                
+                .sf-block {
+                    min-width: 160px !important;
+                    min-height: 100px !important;
+                }
+                
+                .sf-property-panel {
+                    position: fixed !important;
+                    left: 5% !important;
+                    top: 10% !important;
+                    width: 90% !important;
+                    max-height: 80% !important;
+                    z-index: 1002 !important;
+                    overflow-y: auto !important;
+                }
+                
+                .sf-context-menu {
+                    position: fixed !important;
+                    z-index: 1003 !important;
+                }
+                
+                .sf-dialog {
+                    width: 95% !important;
+                    height: 90vh !important;
+                    max-width: none !important;
+                }
+            }
+        `;
+        
+        document.head.appendChild(style);
+    };
+    
     // Initialize all mobile enhancements
+    sf.applyMobileStyles();
+    sf.makeResponsive();
     sf.initMobilePalette();
     sf.enhanceTouchDragging();
     sf.addTouchGestures();
     sf.enhanceTouchConnections();
-    sf.makeResponsive();
     
     console.log("ScriptFlow mobile enhancements applied successfully");
 }
