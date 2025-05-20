@@ -4577,22 +4577,83 @@ function enhanceScriptFlowForMobile() {
         });
         
         // Modify the startBlockDrag for better touch support
-        const originalStartBlockDrag = this.startBlockDrag;
-        this.startBlockDrag = function(e, categoryKey, blockKey) {
-            // For touch events, extract the touch data
-            if (e.touches) {
-                const touch = e.touches[0];
-                // Create a simulated mouse event
-                const simulatedEvent = {
-                    clientX: touch.clientX,
-                    clientY: touch.clientY,
-                    preventDefault: () => e.preventDefault()
-                };
-                originalStartBlockDrag.call(this, simulatedEvent, categoryKey, blockKey);
-            } else {
-                // Normal mouse event
-                originalStartBlockDrag.call(this, e, categoryKey, blockKey);
-            }
+        const originalStartBlockDrag = sf.startBlockDrag;
+        sf.startBlockDrag = function(e, categoryKey, blockKey) {
+        // Handle touch events properly
+        let clientX, clientY;
+        
+        if (e.touches) {
+            // Touch event
+            clientX = e.touches[0].clientX;
+            clientY = e.touches[0].clientY;
+        } else {
+            // Mouse event
+            clientX = e.clientX;
+            clientY = e.clientY;
+        }
+        
+        // Revised event object to ensure proper positioning
+        const eventObj = {
+            clientX,
+            clientY,
+            preventDefault: () => e.preventDefault ? e.preventDefault() : null
+        };
+        
+        const canvasRect = this.canvas.getBoundingClientRect();
+        const x = (clientX - canvasRect.left) / this.canvasScale - this.canvasOffsetX;
+        const y = (clientY - canvasRect.top) / this.canvasScale - this.canvasOffsetY;
+        
+        // Set default size for blocks based on category
+        let defaultWidth = 200;
+        let defaultHeight = 120;
+        
+        // Make input blocks smaller by default
+        if (categoryKey === 'inputs') {
+            defaultWidth = 140;
+            defaultHeight = 100;
+        }
+        
+        // Generate unique ID for the block
+        const blockId = this.generateUniqueId();
+        
+        // Create block data
+        this.draggedBlock = {
+            id: blockId,
+            type: blockKey,
+            category: categoryKey,
+            x: x - 100, // Offset from cursor to center block
+            y: y - 60,  // Offset from cursor to center block
+            width: defaultWidth,
+            height: defaultHeight,
+            inputs: {},
+            outputs: {},
+            options: {}
+        };
+        
+        // Initialize block template options
+        const blockTemplate = this.blockLibrary[categoryKey].blocks[blockKey];
+        if (blockTemplate && blockTemplate.options) {
+            blockTemplate.options.forEach(option => {
+            this.draggedBlock.options[option.name] = option.default || '';
+            });
+        }
+        
+        // Create and append the block element
+        const blockEl = this.createBlockElement(this.draggedBlock);
+        blockEl.style.width = `${defaultWidth}px`;
+        blockEl.style.height = `${defaultHeight}px`;
+        this.canvas.appendChild(blockEl);
+        
+        // Add to blocks collection
+        this.blocks.push(this.draggedBlock);
+        
+        // If on mobile, fix the drag offset calculation
+        if (this.isMobileDevice()) {
+            this.dragOffsetX = defaultWidth / 2;
+            this.dragOffsetY = defaultHeight / 2;
+        }
+        
+        return blockId;
         };
         
         // Add touch start handler to all existing blocks
@@ -4894,6 +4955,106 @@ function enhanceScriptFlowForMobile() {
             }
         };
     };
+
+    sf.enhanceContextMenu = function() {
+        const canvasContainer = this.canvas.parentElement;
+        
+        // Clear any existing handlers
+        canvasContainer.removeEventListener('touchstart', this._longPressHandler);
+        canvasContainer.removeEventListener('touchend', this._cancelLongPressHandler);
+        canvasContainer.removeEventListener('touchmove', this._cancelLongPressHandler);
+        
+        // Create new long-press handler
+        let longPressTimer;
+        let longPressStartX, longPressStartY;
+        let hasShownMenu = false;
+        
+        this._longPressHandler = (e) => {
+          if (e.touches.length !== 1) return;
+          
+          longPressStartX = e.touches[0].clientX;
+          longPressStartY = e.touches[0].clientY;
+          hasShownMenu = false;
+          
+          // Clear any existing timer
+          if (longPressTimer) clearTimeout(longPressTimer);
+          
+          // Set new timer for long press
+          longPressTimer = setTimeout(() => {
+            const elementAtPoint = document.elementFromPoint(longPressStartX, longPressStartY);
+            
+            if (elementAtPoint) {
+              // Special handling for blocks and connections
+              let targetElement = elementAtPoint;
+              
+              // Check if we're on a block
+              const blockElement = targetElement.closest('.sf-block');
+              if (blockElement) {
+                targetElement = blockElement;
+              }
+              
+              // Check if we're on a connection
+              const pathElement = targetElement.closest('path');
+              if (pathElement && pathElement.parentElement && pathElement.parentElement.classList.contains('sf-connection')) {
+                targetElement = pathElement;
+              }
+              
+              // Create a simulated right-click event
+              const contextEvent = new MouseEvent('contextmenu', {
+                bubbles: true,
+                cancelable: true,
+                clientX: longPressStartX,
+                clientY: longPressStartY,
+                view: window
+              });
+              
+              // Dispatch the event to show context menu
+              targetElement.dispatchEvent(contextEvent);
+              hasShownMenu = true;
+              
+              // Add vibration feedback on supported devices
+              if (navigator.vibrate) {
+                navigator.vibrate(50);
+              }
+            }
+            
+            longPressTimer = null;
+          }, 500); // Reduced from 750ms to 500ms for better responsiveness
+        };
+        
+        this._cancelLongPressHandler = (e) => {
+          // Only cancel if we haven't shown the menu yet
+          if (!hasShownMenu) {
+            clearTimeout(longPressTimer);
+            longPressTimer = null;
+          }
+        };
+        
+        // Only monitor significant moves (allow small finger movements)
+        this._checkLongPressMoveHandler = (e) => {
+          if (!longPressTimer) return;
+          
+          const moveX = e.touches[0].clientX;
+          const moveY = e.touches[0].clientY;
+          
+          const moveDistance = Math.hypot(
+            moveX - longPressStartX,
+            moveY - longPressStartY
+          );
+          
+          // Cancel if moved more than threshold
+          if (moveDistance > 15) {
+            clearTimeout(longPressTimer);
+            longPressTimer = null;
+          }
+        };
+        
+        // Add listeners
+        canvasContainer.addEventListener('touchstart', this._longPressHandler, { passive: true });
+        canvasContainer.addEventListener('touchend', this._cancelLongPressHandler);
+        canvasContainer.addEventListener('touchcancel', this._cancelLongPressHandler);
+        canvasContainer.addEventListener('touchmove', this._checkLongPressMoveHandler, { passive: true });
+      };
     
     // Add responsive layout adjustments
     sf.makeResponsive = function() {
@@ -5252,93 +5413,102 @@ function enhanceScriptFlowMobileUsability() {
     
     // Fix 2: Improve block palette drag and drop for mobile
     sf.enhanceMobileBlockDragging = function() {
-      // Make sure we have the palette toggle
-      if (!document.querySelector('.sf-palette-toggle') && this.isMobileDevice()) {
-        this.initMobilePalette();
-      }
-      
-      // Clear existing touch handlers to prevent duplicates
-      document.querySelectorAll('.sf-block-template').forEach(blockTemplate => {
-        const clone = blockTemplate.cloneNode(true);
-        blockTemplate.parentNode.replaceChild(clone, blockTemplate);
-      });
-      
-      // Add enhanced touch handlers
-      document.querySelectorAll('.sf-block-template').forEach(blockTemplate => {
-        blockTemplate.addEventListener('touchstart', (e) => {
-          e.preventDefault(); // Prevent scrolling
-          
-          const categoryKey = blockTemplate.dataset.category;
-          const blockKey = blockTemplate.dataset.type;
-          
-          // Visual feedback
-          blockTemplate.classList.add('sf-dragging');
-          
-          // Store initial touch position
-          const initialTouch = e.touches[0];
-          const touchStartX = initialTouch.clientX;
-          const touchStartY = initialTouch.clientY;
-          let hasDragged = false;
-          
-          const touchMoveHandler = (moveEvent) => {
-            moveEvent.preventDefault();
+        // Make sure we have the palette toggle
+        if (!document.querySelector('.sf-palette-toggle') && this.isMobileDevice()) {
+          this.initMobilePalette();
+        }
+        
+        // Clear existing touch handlers to prevent duplicates
+        document.querySelectorAll('.sf-block-template').forEach(blockTemplate => {
+          const clone = blockTemplate.cloneNode(true);
+          blockTemplate.parentNode.replaceChild(clone, blockTemplate);
+        });
+        
+        // Add enhanced touch handlers with better mobile detection
+        document.querySelectorAll('.sf-block-template').forEach(blockTemplate => {
+          blockTemplate.addEventListener('touchstart', (e) => {
+            // Prevent default scrolling behavior
+            e.preventDefault();
             
-            const touch = moveEvent.touches[0];
-            // Calculate distance moved
-            const dx = touch.clientX - touchStartX;
-            const dy = touch.clientY - touchStartY;
-            const distance = Math.sqrt(dx * dx + dy * dy);
+            const categoryKey = blockTemplate.dataset.category;
+            const blockKey = blockTemplate.dataset.type;
             
-            // Only start drag if moved a significant distance (prevents accidental drags)
-            if (distance > 15 && !hasDragged) {
-              hasDragged = true;
-              // Close palette when dragging starts on mobile
-              if (this.isMobileDevice() && this.palette.classList.contains('open')) {
-                this.palette.classList.remove('open');
-                const toggleBtn = document.querySelector('.sf-palette-toggle');
-                if (toggleBtn) toggleBtn.innerHTML = '&#9776;';
+            // Visual feedback - make it very obvious the item is selected
+            blockTemplate.classList.add('sf-dragging');
+            
+            // Store initial touch position
+            const initialTouch = e.touches[0];
+            const touchStartX = initialTouch.clientX;
+            const touchStartY = initialTouch.clientY;
+            
+            // Track drag state
+            let hasDragged = false;
+            let dragStarted = false;
+            
+            const touchMoveHandler = (moveEvent) => {
+              moveEvent.preventDefault();
+              
+              const touch = moveEvent.touches[0];
+              // Calculate distance moved
+              const dx = touch.clientX - touchStartX;
+              const dy = touch.clientY - touchStartY;
+              const distance = Math.sqrt(dx * dx + dy * dy);
+              
+              // Only start drag if moved a significant distance (prevents accidental drags)
+              if (distance > 10 && !dragStarted) {
+                // Once we've moved enough to consider it a drag, initialize the block
+                dragStarted = true;
+                
+                // Create simulated mouse event and start dragging
+                const simulatedEvent = {
+                  clientX: touch.clientX,
+                  clientY: touch.clientY,
+                  preventDefault: () => {}
+                };
+                
+                // Close palette when dragging starts on mobile
+                if (this.isMobileDevice() && this.palette.classList.contains('open')) {
+                  this.palette.classList.remove('open');
+                  const toggleBtn = document.querySelector('.sf-palette-toggle');
+                  if (toggleBtn) toggleBtn.innerHTML = '&#9776;';
+                }
+                
+                // Directly create the block to ensure it works on mobile
+                this.startBlockDrag(simulatedEvent, categoryKey, blockKey);
+                hasDragged = true;
               }
               
-              // Create simulated mouse event and start dragging
-              const simulatedEvent = {
-                clientX: touch.clientX,
-                clientY: touch.clientY,
-                preventDefault: () => {}
-              };
-              this.startBlockDrag(simulatedEvent, categoryKey, blockKey);
-            }
+              // Update position during drag if already started
+              if (dragStarted && this.draggedBlock) {
+                this.onCanvasMouseMove({
+                  clientX: touch.clientX,
+                  clientY: touch.clientY
+                });
+              }
+            };
             
-            // Update position during drag if already started
-            if (hasDragged && this.draggedBlock) {
-              this.onCanvasMouseMove({
-                clientX: touch.clientX,
-                clientY: touch.clientY
-              });
-            }
-          };
-          
-          const touchEndHandler = (endEvent) => {
-            blockTemplate.classList.remove('sf-dragging');
+            const touchEndHandler = (endEvent) => {
+              blockTemplate.classList.remove('sf-dragging');
+              
+              if (hasDragged && this.draggedBlock) {
+                const touch = endEvent.changedTouches[0];
+                this.onCanvasMouseUp({
+                  clientX: touch.clientX,
+                  clientY: touch.clientY
+                });
+              }
+              
+              document.removeEventListener('touchmove', touchMoveHandler);
+              document.removeEventListener('touchend', touchEndHandler);
+              document.removeEventListener('touchcancel', touchEndHandler);
+            };
             
-            if (hasDragged && this.draggedBlock) {
-              const touch = endEvent.changedTouches[0];
-              this.onCanvasMouseUp({
-                clientX: touch.clientX,
-                clientY: touch.clientY
-              });
-            }
-            
-            document.removeEventListener('touchmove', touchMoveHandler);
-            document.removeEventListener('touchend', touchEndHandler);
-            document.removeEventListener('touchcancel', touchEndHandler);
-          };
-          
-          document.addEventListener('touchmove', touchMoveHandler, { passive: false });
-          document.addEventListener('touchend', touchEndHandler);
-          document.addEventListener('touchcancel', touchEndHandler);
+            document.addEventListener('touchmove', touchMoveHandler, { passive: false });
+            document.addEventListener('touchend', touchEndHandler);
+            document.addEventListener('touchcancel', touchEndHandler);
+          }, { passive: false }); // Important for iOS
         });
-      });
-    };
+      };
     
     // Fix 3: Fix modal focus issues - prevent background page scrolling/interaction
     sf.enhanceModalBehavior = function() {
@@ -5581,6 +5751,61 @@ function enhanceScriptFlowMobileUsability() {
       `;
       
       document.head.appendChild(style);
+
+      const mobileStyleFixes = document.createElement('style');
+        mobileStyleFixes.id = 'sf-mobile-touch-fixes';
+        mobileStyleFixes.textContent = `
+        /* Fix palette block templates for better touch interaction */
+        .sf-block-template {
+            cursor: grab;
+            transition: transform 0.2s, opacity 0.2s;
+            touch-action: none !important;
+        }
+        
+        .sf-block-template.sf-dragging {
+            background-color: rgba(52, 152, 219, 0.3) !important;
+            transform: scale(1.05);
+            opacity: 0.8;
+            box-shadow: 0 0 15px rgba(52, 152, 219, 0.5);
+        }
+        
+        /* Improve canvas interactions */
+        .sf-canvas-container {
+            touch-action: none !important;
+            -webkit-overflow-scrolling: auto !important;
+            overscroll-behavior: none !important;
+        }
+        
+        /* Fix context menu for touch */
+        .sf-context-menu {
+            min-width: 200px;
+            max-width: 80vw;
+            padding: 8px 0;
+            border-radius: 8px;
+            pointer-events: auto !important; 
+        }
+        
+        /* Make palette items easier to touch */
+        @media (max-width: 768px) {
+            .sf-block-template {
+            padding: 15px !important;
+            margin: 8px 0 !important;
+            border-radius: 6px !important;
+            }
+            
+            .sf-context-menu-item {
+            padding: 16px !important;
+            min-height: 24px !important;
+            }
+            
+            /* Ensure palette is fully visible */
+            .sf-palette.open {
+            width: 80% !important;
+            max-width: 300px !important;
+            }
+        }
+        `;
+        document.head.appendChild(mobileStyleFixes);
     };
     
     // Specifically fix mobile Safari scrolling and zooming issues
@@ -5629,9 +5854,11 @@ function enhanceScriptFlowMobileUsability() {
     
     // Apply all fixes
     sf.addMobileStyles();
+    sf.enhanceContextMenu();
     sf.enhanceMobileBlockDragging();
     sf.enhanceModalBehavior();
     sf.fixMobileSafari();
+
     
     console.log("ScriptFlow mobile usability enhancements applied successfully");
   }
