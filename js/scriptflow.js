@@ -5253,261 +5253,267 @@ function enhanceScriptFlowMobileUsability() {
     const sf = window.scriptFlow;
     
     // Fix 1: Improve context menu for mobile
-    sf.showContextMenu = function(e) {
-      const element = document.elementFromPoint(e.clientX, e.clientY);
-      
-      // Determine context menu content based on element clicked
-      let menuItems = '';
-      let contextData = {};
-      
-      // Check if clicked on a connection
-      if (element.tagName === 'path' && element.parentElement.classList.contains('sf-connection')) {
-        const connectionId = element.parentElement.id.split('-')[1];
-        menuItems = `
-          <div class="sf-context-menu-item" data-action="delete-connection" data-id="${connectionId}">
-            Delete Connection
-          </div>
-        `;
-        contextData.type = 'connection';
-        contextData.id = connectionId;
-      } 
-      // Check if clicked on a block
-      else if (element.closest('.sf-block')) {
-        const block = element.closest('.sf-block');
-        const blockId = block.id.split('-')[1];
-        const blockData = this.blocks.find(b => b.id === blockId);
+    sf.enhanceContextMenu = function() {
+        const canvasContainer = this.canvas.parentElement;
         
-        menuItems = `
-          <div class="sf-context-menu-item" data-action="duplicate-block" data-id="${blockId}">
-            Duplicate
-          </div>
-          <div class="sf-context-menu-item" data-action="delete-block" data-id="${blockId}">
-            Delete
-          </div>
-        `;
+        // Clear any existing handlers to prevent duplicates
+        canvasContainer.removeEventListener('touchstart', this._longPressHandler);
+        canvasContainer.removeEventListener('touchend', this._cancelLongPressHandler);
+        canvasContainer.removeEventListener('touchmove', this._cancelLongPressHandler);
         
-        // Add edit subflow option for custom function blocks
-        if (blockData.category === 'customFunction') {
-          menuItems += `
-            <div class="sf-context-menu-separator"></div>
-            <div class="sf-context-menu-item" data-action="edit-subflow" data-id="${blockId}">
-              Edit Function Contents
-            </div>
-          `;
-        }
+        // Create long-press handler with improved detection
+        let longPressTimer;
+        let longPressStartX, longPressStartY;
         
-        contextData.type = 'block';
-        contextData.id = blockId;
-      } 
-      // Canvas context menu
-      else {
-        const canvasRect = this.canvas.getBoundingClientRect();
-        const canvasX = (e.clientX - canvasRect.left) / this.canvasScale - this.canvasOffsetX;
-        const canvasY = (e.clientY - canvasRect.top) / this.canvasScale - this.canvasOffsetY;
-        
-        menuItems = `
-          <div class="sf-context-menu-item" data-action="add-custom-function" data-x="${canvasX}" data-y="${canvasY}">
-            Add Custom Function
-          </div>
-          <div class="sf-context-menu-item" data-action="paste">
-            Paste
-          </div>
-          <div class="sf-context-menu-separator"></div>
-          <div class="sf-context-menu-item" data-action="select-all">
-            Select All
-          </div>
-          <div class="sf-context-menu-item" data-action="center-view">
-            Center View
-          </div>
-        `;
-        
-        contextData.type = 'canvas';
-        contextData.x = canvasX;
-        contextData.y = canvasY;
-      }
-      
-      // Add content to the context menu
-      this.contextMenu.innerHTML = menuItems;
-      
-      // Position and show the context menu
-      this.contextMenu.style.left = e.clientX + 'px';
-      this.contextMenu.style.top = e.clientY + 'px';
-      this.contextMenu.style.display = 'block';
-      this.contextMenu.dataset.contextType = contextData.type;
-      
-      // Store context data for later use
-      this.contextMenu.contextData = contextData;
-      
-      // Remove old event listeners to prevent duplicates
-      const oldItems = this.contextMenu.querySelectorAll('.sf-context-menu-item');
-      oldItems.forEach(item => {
-        const clone = item.cloneNode(true);
-        item.parentNode.replaceChild(clone, item);
-      });
-      
-      // Add event listeners for mobile and desktop
-      this.contextMenu.querySelectorAll('.sf-context-menu-item').forEach(item => {
-        // Handle both touch and click events
-        const handleAction = () => {
-          const action = item.dataset.action;
+        this._longPressHandler = (e) => {
+          if (e.touches.length !== 1) return;
           
-          switch (action) {
-            case 'delete-connection':
-              this.deleteConnection(contextData.id);
-              break;
-            case 'duplicate-block':
-              this.duplicateBlock(contextData.id);
-              break;
-            case 'delete-block':
-              this.deleteBlock(contextData.id);
-              break;
-            case 'edit-subflow':
-              this.editSubflow(contextData.id);
-              break;
-            case 'add-custom-function':
-              this.addCustomFunction(contextData.x, contextData.y);
-              break;
-            case 'paste':
-              // Implement paste functionality
-              break;
-            case 'select-all':
-              // Implement select all functionality
-              break;
-            case 'center-view':
-              this.resetCanvasZoom();
-              break;
-          }
+          longPressStartX = e.touches[0].clientX;
+          longPressStartY = e.touches[0].clientY;
           
-          // Always hide the menu after action
-          this.contextMenu.style.display = 'none';
+          // Clear any existing timer
+          if (longPressTimer) clearTimeout(longPressTimer);
+          
+          // Set new timer for long press - reduced time for better responsiveness
+          longPressTimer = setTimeout(() => {
+            // Prevent any text selection during long press
+            document.getSelection().removeAllRanges();
+            
+            // Find element at position
+            const elementAtPoint = document.elementFromPoint(longPressStartX, longPressStartY);
+            
+            if (elementAtPoint) {
+              // Target determination with better precision
+              let targetElement = elementAtPoint;
+              
+              // Check for block
+              const blockElement = targetElement.closest('.sf-block');
+              if (blockElement) {
+                targetElement = blockElement;
+              }
+              
+              // Check for connection
+              const pathElement = targetElement.closest('path');
+              if (pathElement && pathElement.parentElement && 
+                  pathElement.parentElement.classList.contains('sf-connection')) {
+                targetElement = pathElement;
+              }
+              
+              // Create and dispatch synthetic contextmenu event
+              const contextEvent = new MouseEvent('contextmenu', {
+                bubbles: true,
+                cancelable: true,
+                clientX: longPressStartX,
+                clientY: longPressStartY,
+                view: window
+              });
+              
+              targetElement.dispatchEvent(contextEvent);
+              
+              // Provide haptic feedback
+              if (navigator.vibrate) {
+                navigator.vibrate(50);
+              }
+            }
+            
+            longPressTimer = null;
+          }, 400); // Reduced from 500ms to 400ms for better responsiveness
         };
         
-        // Add both event types for cross-device compatibility
-        item.addEventListener('click', handleAction);
-        item.addEventListener('touchend', (e) => {
-          e.preventDefault(); // Prevent double firing with click
-          handleAction();
-        });
-      });
-      
-      // Add click/touch outside handler to close context menu
-      const closeContextMenu = (event) => {
-        // Don't close if clicking inside the menu
-        if (this.contextMenu.contains(event.target)) return;
+        this._cancelLongPressHandler = (e) => {
+          clearTimeout(longPressTimer);
+          longPressTimer = null;
+        };
         
-        this.contextMenu.style.display = 'none';
-        document.removeEventListener('click', closeContextMenu);
-        document.removeEventListener('touchstart', closeContextMenu);
+        // Only monitor significant moves (allow small finger movements)
+        this._checkLongPressMoveHandler = (e) => {
+          if (!longPressTimer) return;
+          
+          const moveX = e.touches[0].clientX;
+          const moveY = e.touches[0].clientY;
+          
+          const moveDistance = Math.hypot(
+            moveX - longPressStartX,
+            moveY - longPressStartY
+          );
+          
+          // Cancel if moved more than threshold
+          if (moveDistance > 10) { // Reduced threshold for faster cancellation
+            clearTimeout(longPressTimer);
+            longPressTimer = null;
+          }
+        };
+        
+        // Add listeners
+        canvasContainer.addEventListener('touchstart', this._longPressHandler, { passive: true });
+        canvasContainer.addEventListener('touchend', this._cancelLongPressHandler);
+        canvasContainer.addEventListener('touchcancel', this._cancelLongPressHandler);
+        canvasContainer.addEventListener('touchmove', this._checkLongPressMoveHandler, { passive: true });
       };
-      
-      // Remove any existing listeners first
-      document.removeEventListener('click', closeContextMenu);
-      document.removeEventListener('touchstart', closeContextMenu);
-      
-      // Add with a slight delay to prevent immediate closing
-      setTimeout(() => {
-        document.addEventListener('click', closeContextMenu);
-        document.addEventListener('touchstart', closeContextMenu);
-      }, 100);
-    };
     
     // Fix 2: Improve block palette drag and drop for mobile
     sf.enhanceMobileBlockDragging = function() {
-        // Make sure we have the palette toggle
-        if (!document.querySelector('.sf-palette-toggle') && this.isMobileDevice()) {
-          this.initMobilePalette();
-        }
-        
-        // Clear existing touch handlers to prevent duplicates
+        // Remove existing touch handlers to prevent duplicates
         document.querySelectorAll('.sf-block-template').forEach(blockTemplate => {
+          blockTemplate.addEventListener('touchstart', e => e.preventDefault(), { passive: false });
           const clone = blockTemplate.cloneNode(true);
           blockTemplate.parentNode.replaceChild(clone, blockTemplate);
         });
         
-        // Add enhanced touch handlers with better mobile detection
+        // Prevent text selection on palette items
+        const styleTag = document.createElement('style');
+        styleTag.textContent = `
+          .sf-block-template {
+            user-select: none !important;
+            -webkit-user-select: none !important;
+            -moz-user-select: none !important;
+            touch-action: none !important;
+          }
+          
+          .sf-palette * {
+            user-select: none !important;
+            -webkit-user-select: none !important;
+          }
+          
+          .sf-dragging-block {
+            position: absolute;
+            z-index: 1000;
+            opacity: 0.85;
+            pointer-events: none;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+            transform: scale(1.05);
+            transition: transform 0.2s;
+            border-radius: 6px;
+          }
+        `;
+        document.head.appendChild(styleTag);
+        
+        // Add enhanced touch handlers
         document.querySelectorAll('.sf-block-template').forEach(blockTemplate => {
           blockTemplate.addEventListener('touchstart', (e) => {
-            // Prevent default scrolling behavior
-            e.preventDefault();
+            e.preventDefault(); // Prevent scrolling and text selection
             
             const categoryKey = blockTemplate.dataset.category;
             const blockKey = blockTemplate.dataset.type;
             
-            // Visual feedback - make it very obvious the item is selected
-            blockTemplate.classList.add('sf-dragging');
+            // Create visual feedback element (ghost block)
+            const ghost = document.createElement('div');
+            ghost.className = 'sf-dragging-block';
+            ghost.textContent = blockTemplate.textContent;
+            ghost.style.width = `${blockTemplate.offsetWidth}px`;
+            ghost.style.height = `${blockTemplate.offsetHeight}px`;
+            ghost.style.backgroundColor = window.getComputedStyle(blockTemplate).backgroundColor;
+            ghost.style.color = window.getComputedStyle(blockTemplate).color;
+            ghost.style.padding = window.getComputedStyle(blockTemplate).padding;
+            ghost.style.fontFamily = window.getComputedStyle(blockTemplate).fontFamily;
+            ghost.style.fontSize = window.getComputedStyle(blockTemplate).fontSize;
+            
+            // Position ghost at touch point
+            ghost.style.left = `${e.touches[0].clientX - blockTemplate.offsetWidth/2}px`;
+            ghost.style.top = `${e.touches[0].clientY - blockTemplate.offsetHeight/2}px`;
+            document.body.appendChild(ghost);
+            
+            // Close palette when dragging starts on mobile
+            if (this.isMobileDevice() && this.palette.classList.contains('open')) {
+              this.palette.classList.remove('open');
+              const toggleBtn = document.querySelector('.sf-palette-toggle');
+              if (toggleBtn) toggleBtn.innerHTML = '&#9776;';
+            }
             
             // Store initial touch position
-            const initialTouch = e.touches[0];
-            const touchStartX = initialTouch.clientX;
-            const touchStartY = initialTouch.clientY;
-            
-            // Track drag state
-            let hasDragged = false;
-            let dragStarted = false;
+            const touchStartX = e.touches[0].clientX;
+            const touchStartY = e.touches[0].clientY;
+            let blockCreated = false;
+            let newBlockId = null;
             
             const touchMoveHandler = (moveEvent) => {
-              moveEvent.preventDefault();
+              moveEvent.preventDefault(); // Prevent scrolling
               
-              const touch = moveEvent.touches[0];
+              // Move the ghost element
+              ghost.style.left = `${moveEvent.touches[0].clientX - blockTemplate.offsetWidth/2}px`;
+              ghost.style.top = `${moveEvent.touches[0].clientY - blockTemplate.offsetHeight/2}px`;
+              
               // Calculate distance moved
-              const dx = touch.clientX - touchStartX;
-              const dy = touch.clientY - touchStartY;
+              const dx = moveEvent.touches[0].clientX - touchStartX;
+              const dy = moveEvent.touches[0].clientY - touchStartY;
               const distance = Math.sqrt(dx * dx + dy * dy);
               
-              // Only start drag if moved a significant distance (prevents accidental drags)
-              if (distance > 10 && !dragStarted) {
-                // Once we've moved enough to consider it a drag, initialize the block
-                dragStarted = true;
-                
-                // Create simulated mouse event and start dragging
+              // Create block once we've moved enough
+              if (distance > 15 && !blockCreated) {
+                // Create block using simulated event
                 const simulatedEvent = {
-                  clientX: touch.clientX,
-                  clientY: touch.clientY,
+                  clientX: moveEvent.touches[0].clientX,
+                  clientY: moveEvent.touches[0].clientY,
                   preventDefault: () => {}
                 };
                 
-                // Close palette when dragging starts on mobile
-                if (this.isMobileDevice() && this.palette.classList.contains('open')) {
-                  this.palette.classList.remove('open');
-                  const toggleBtn = document.querySelector('.sf-palette-toggle');
-                  if (toggleBtn) toggleBtn.innerHTML = '&#9776;';
-                }
+                // Create the actual block
+                newBlockId = this.startBlockDrag(simulatedEvent, categoryKey, blockKey);
+                blockCreated = true;
                 
-                // Directly create the block to ensure it works on mobile
-                this.startBlockDrag(simulatedEvent, categoryKey, blockKey);
-                hasDragged = true;
+                // Update dragged block position
+                this.onCanvasMouseMove({
+                  clientX: moveEvent.touches[0].clientX,
+                  clientY: moveEvent.touches[0].clientY
+                });
               }
               
-              // Update position during drag if already started
-              if (dragStarted && this.draggedBlock) {
+              // Update position during drag if already created
+              if (blockCreated && this.draggedBlock) {
                 this.onCanvasMouseMove({
-                  clientX: touch.clientX,
-                  clientY: touch.clientY
+                  clientX: moveEvent.touches[0].clientX,
+                  clientY: moveEvent.touches[0].clientY
                 });
               }
             };
             
             const touchEndHandler = (endEvent) => {
-              blockTemplate.classList.remove('sf-dragging');
+              // Remove ghost element
+              ghost.remove();
               
-              if (hasDragged && this.draggedBlock) {
-                const touch = endEvent.changedTouches[0];
+              // Finalize block if created
+              if (blockCreated && this.draggedBlock) {
                 this.onCanvasMouseUp({
-                  clientX: touch.clientX,
-                  clientY: touch.clientY
+                  clientX: endEvent.changedTouches[0].clientX,
+                  clientY: endEvent.changedTouches[0].clientY
                 });
+                
+                // Add visual feedback for placement
+                const placedBlock = document.getElementById(`block-${newBlockId}`);
+                if (placedBlock) {
+                  placedBlock.classList.add('sf-block-placed');
+                  setTimeout(() => {
+                    placedBlock.classList.remove('sf-block-placed');
+                  }, 300);
+                }
               }
               
+              // Clean up event listeners
               document.removeEventListener('touchmove', touchMoveHandler);
               document.removeEventListener('touchend', touchEndHandler);
               document.removeEventListener('touchcancel', touchEndHandler);
             };
             
+            // Add document-level handlers for drag
             document.addEventListener('touchmove', touchMoveHandler, { passive: false });
             document.addEventListener('touchend', touchEndHandler);
             document.addEventListener('touchcancel', touchEndHandler);
           }, { passive: false }); // Important for iOS
         });
+        
+        // Add animation for block placement
+        const animationStyle = document.createElement('style');
+        animationStyle.textContent = `
+          @keyframes sf-block-placed-animation {
+            0% { transform: scale(1.1); box-shadow: 0 0 20px rgba(46, 204, 113, 0.7); }
+            100% { transform: scale(1); box-shadow: none; }
+          }
+          
+          .sf-block-placed {
+            animation: sf-block-placed-animation 0.3s ease-out;
+          }
+        `;
+        document.head.appendChild(animationStyle);
       };
     
     // Fix 3: Fix modal focus issues - prevent background page scrolling/interaction
@@ -5663,6 +5669,191 @@ function enhanceScriptFlowMobileUsability() {
         }
       };
     };
+
+    sf.showContextMenu = function(e) {
+        const element = document.elementFromPoint(e.clientX, e.clientY);
+        
+        // Prevent text selection
+        document.getSelection().removeAllRanges();
+        
+        // Determine context menu content based on element clicked
+        let menuItems = '';
+        let contextData = {};
+        
+        // Check if clicked on a connection
+        if (element.tagName === 'path' && element.parentElement.classList.contains('sf-connection')) {
+          const connectionId = element.parentElement.id.split('-')[1];
+          menuItems = `
+            <div class="sf-context-menu-item" data-action="delete-connection" data-id="${connectionId}">
+              Delete Connection
+            </div>
+          `;
+          contextData.type = 'connection';
+          contextData.id = connectionId;
+        } 
+        // Check if clicked on a block
+        else if (element.closest('.sf-block')) {
+          const block = element.closest('.sf-block');
+          const blockId = block.id.split('-')[1];
+          const blockData = this.blocks.find(b => b.id === blockId);
+          
+          menuItems = `
+            <div class="sf-context-menu-item" data-action="duplicate-block" data-id="${blockId}">
+              Duplicate
+            </div>
+            <div class="sf-context-menu-item" data-action="delete-block" data-id="${blockId}">
+              Delete
+            </div>
+          `;
+          
+          // Add edit subflow option for custom function blocks
+          if (blockData.category === 'customFunction') {
+            menuItems += `
+              <div class="sf-context-menu-separator"></div>
+              <div class="sf-context-menu-item" data-action="edit-subflow" data-id="${blockId}">
+                Edit Function Contents
+              </div>
+            `;
+          }
+          
+          contextData.type = 'block';
+          contextData.id = blockId;
+        } 
+        // Canvas context menu
+        else {
+          const canvasRect = this.canvas.getBoundingClientRect();
+          const canvasX = (e.clientX - canvasRect.left) / this.canvasScale - this.canvasOffsetX;
+          const canvasY = (e.clientY - canvasRect.top) / this.canvasScale - this.canvasOffsetY;
+          
+          menuItems = `
+            <div class="sf-context-menu-item" data-action="add-custom-function" data-x="${canvasX}" data-y="${canvasY}">
+              Add Custom Function
+            </div>
+            <div class="sf-context-menu-separator"></div>
+            <div class="sf-context-menu-item" data-action="center-view">
+              Center View
+            </div>
+          `;
+          
+          contextData.type = 'canvas';
+          contextData.x = canvasX;
+          contextData.y = canvasY;
+        }
+        
+        // Add content to the context menu
+        this.contextMenu.innerHTML = menuItems;
+        
+        // Position and show the context menu
+        // Adjust position to ensure it's fully visible on screen
+        const viewportWidth = window.innerWidth;
+        const viewportHeight = window.innerHeight;
+        
+        // Reset any previous inline positioning
+        this.contextMenu.style.bottom = '';
+        this.contextMenu.style.right = '';
+        
+        // Create an invisible clone to measure size
+        this.contextMenu.style.visibility = 'hidden';
+        this.contextMenu.style.display = 'block';
+        const menuWidth = this.contextMenu.offsetWidth;
+        const menuHeight = this.contextMenu.offsetHeight;
+        this.contextMenu.style.visibility = '';
+        
+        // Adjust position to prevent overflow
+        let leftPos = e.clientX;
+        let topPos = e.clientY;
+        
+        if (leftPos + menuWidth > viewportWidth) {
+          leftPos = viewportWidth - menuWidth - 10;
+        }
+        
+        if (topPos + menuHeight > viewportHeight) {
+          topPos = viewportHeight - menuHeight - 10;
+        }
+        
+        this.contextMenu.style.left = `${leftPos}px`;
+        this.contextMenu.style.top = `${topPos}px`;
+        this.contextMenu.style.display = 'block';
+        this.contextMenu.dataset.contextType = contextData.type;
+        
+        // Store context data for later use
+        this.contextMenu.contextData = contextData;
+        
+        // Remove old event listeners to prevent duplicates
+        const oldItems = this.contextMenu.querySelectorAll('.sf-context-menu-item');
+        oldItems.forEach(item => {
+          const clone = item.cloneNode(true);
+          item.parentNode.replaceChild(clone, item);
+        });
+        
+        // Add event listeners for menu items with improved touch handling
+        this.contextMenu.querySelectorAll('.sf-context-menu-item').forEach(item => {
+          // Combined handler for both touch and mouse events
+          const handleAction = (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            const action = item.dataset.action;
+            
+            switch (action) {
+              case 'delete-connection':
+                this.deleteConnection(contextData.id);
+                break;
+              case 'duplicate-block':
+                this.duplicateBlock(contextData.id);
+                break;
+              case 'delete-block':
+                this.deleteBlock(contextData.id);
+                break;
+              case 'edit-subflow':
+                this.editSubflow(contextData.id);
+                break;
+              case 'add-custom-function':
+                this.addCustomFunction(contextData.x, contextData.y);
+                break;
+              case 'center-view':
+                this.resetCanvasZoom();
+                break;
+            }
+            
+            // Always hide the menu after action
+            this.contextMenu.style.display = 'none';
+          };
+          
+          // Add mouse event listeners
+          item.addEventListener('click', handleAction);
+          
+          // Add touch-specific handling
+          item.addEventListener('touchstart', (e) => {
+            // Add active state for visual feedback
+            item.classList.add('sf-context-item-active');
+          });
+          
+          item.addEventListener('touchend', (e) => {
+            item.classList.remove('sf-context-item-active');
+            handleAction(e);
+          });
+          
+          item.addEventListener('touchcancel', () => {
+            item.classList.remove('sf-context-item-active');
+          });
+        });
+        
+        // Handle clicking/touching outside to close menu
+        // Use a timeout to avoid immediate closing
+        setTimeout(() => {
+          const closeContextMenu = (e) => {
+            if (!this.contextMenu.contains(e.target)) {
+              this.contextMenu.style.display = 'none';
+              document.removeEventListener('click', closeContextMenu);
+              document.removeEventListener('touchstart', closeContextMenu);
+            }
+          };
+          
+          document.addEventListener('click', closeContextMenu);
+          document.addEventListener('touchstart', closeContextMenu);
+        }, 50);
+      };
     
     // Add visual styling for better mobile UX
     sf.addMobileStyles = function() {
@@ -5806,6 +5997,91 @@ function enhanceScriptFlowMobileUsability() {
         }
         `;
         document.head.appendChild(mobileStyleFixes);
+
+        const mobileEnhancedStyles = document.createElement('style');
+        mobileEnhancedStyles.id = 'sf-mobile-enhanced-styles';
+        mobileEnhancedStyles.textContent = `
+        /* Improved context menu appearance and interaction */
+        .sf-context-menu {
+            opacity: 0.95;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 5px 25px rgba(0,0,0,0.4);
+            min-width: 180px;
+            transform-origin: top left;
+            animation: sf-context-appear 0.15s ease-out;
+            border: none !important;
+        }
+        
+        @keyframes sf-context-appear {
+            from { opacity: 0; transform: scale(0.95); }
+            to { opacity: 0.95; transform: scale(1); }
+        }
+        
+        .sf-context-menu-item {
+            padding: 14px 18px;
+            position: relative;
+            transition: all 0.1s;
+            overflow: hidden;
+        }
+        
+        .sf-context-menu-item:active,
+        .sf-context-item-active {
+            background-color: rgba(52, 152, 219, 0.7) !important;
+        }
+        
+        .sf-context-menu-item::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 5px;
+            height: 5px;
+            background: rgba(255,255,255,0.5);
+            opacity: 0;
+            border-radius: 100%;
+            transform: scale(1) translate(-50%, -50%);
+            transform-origin: 50% 50%;
+        }
+        
+        .sf-context-menu-item:active::after {
+            animation: sf-ripple 0.5s ease-out;
+        }
+        
+        @keyframes sf-ripple {
+            0% {
+            opacity: 1;
+            transform: scale(0) translate(-50%, -50%);
+            }
+            100% {
+            opacity: 0;
+            transform: scale(20) translate(-50%, -50%);
+            }
+        }
+        
+        .sf-context-menu-separator {
+            height: 1px;
+            background-color: rgba(255,255,255,0.15);
+            margin: 5px 0;
+        }
+        
+        /* Prevent text selection throughout the editor */
+        .sf-editor * {
+            user-select: none !important;
+            -webkit-user-select: none !important;
+        }
+        
+        /* Only allow text selection in specific elements */
+        .sf-editor input, 
+        .sf-editor textarea, 
+        .sf-editor .CodeMirror,
+        .sf-editor .sf-code-editor-wrapper {
+            user-select: text !important;
+            -webkit-user-select: text !important;
+        }
+        `;
+
+        document.head.appendChild(mobileEnhancedStyles);
     };
     
     // Specifically fix mobile Safari scrolling and zooming issues
