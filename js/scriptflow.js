@@ -4512,12 +4512,6 @@ function applyScriptFlowFixes() {
  * Mobile support enhancements for ScriptFlow
  * Adds touch gestures, responsive layout, and mobile-friendly UI
  */
-
-/**
- * Mobile support enhancements for ScriptFlow
- * Adds touch gestures, responsive layout, and mobile-friendly UI
- */
-
 function enhanceScriptFlowForMobile() {
     if (!window.scriptFlow) {
         console.error("ScriptFlow not initialized. Can't add mobile support.");
@@ -4573,6 +4567,15 @@ function enhanceScriptFlowForMobile() {
     
     // Enhanced touch support for block dragging
     sf.enhanceTouchDragging = function() {
+        // Allow block templates to be dragged with touch
+        document.querySelectorAll('.sf-block-template').forEach(blockTemplate => {
+            blockTemplate.addEventListener('touchstart', (e) => {
+                const categoryKey = blockTemplate.dataset.category;
+                const blockKey = blockTemplate.dataset.type;
+                this.startBlockDrag(e, categoryKey, blockKey);
+            });
+        });
+        
         // Modify the startBlockDrag for better touch support
         const originalStartBlockDrag = this.startBlockDrag;
         this.startBlockDrag = function(e, categoryKey, blockKey) {
@@ -4592,6 +4595,20 @@ function enhanceScriptFlowForMobile() {
             }
         };
         
+        // Add touch start handler to all existing blocks
+        document.querySelectorAll('.sf-block').forEach(block => {
+            block.addEventListener('touchstart', (e) => {
+                // Don't drag if touching inside inputs or resizing
+                if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT' || 
+                    e.target.classList.contains('sf-resize-handle')) {
+                    return;
+                }
+                
+                const blockId = block.id.split('-')[1];
+                this.startExistingBlockDrag(e, blockId);
+            });
+        });
+        
         // Update existing block drag for touch
         const originalStartExistingBlockDrag = this.startExistingBlockDrag;
         this.startExistingBlockDrag = function(e, blockId) {
@@ -4605,49 +4622,72 @@ function enhanceScriptFlowForMobile() {
                     button: 0 // Simulate left mouse button
                 };
                 originalStartExistingBlockDrag.call(this, simulatedEvent, blockId);
+                
+                // Track touch moves and ends specifically
+                const touchMoveHandler = (moveEvent) => {
+                    if (this.draggedBlock) {
+                        moveEvent.preventDefault();
+                        this.onCanvasMouseMove({
+                            clientX: moveEvent.touches[0].clientX,
+                            clientY: moveEvent.touches[0].clientY
+                        });
+                    }
+                };
+                
+                const touchEndHandler = (endEvent) => {
+                    if (this.draggedBlock) {
+                        this.onCanvasMouseUp({
+                            clientX: endEvent.changedTouches[0].clientX,
+                            clientY: endEvent.changedTouches[0].clientY
+                        });
+                    }
+                    
+                    document.removeEventListener('touchmove', touchMoveHandler);
+                    document.removeEventListener('touchend', touchEndHandler);
+                };
+                
+                document.addEventListener('touchmove', touchMoveHandler, { passive: false });
+                document.addEventListener('touchend', touchEndHandler);
             } else {
                 originalStartExistingBlockDrag.call(this, e, blockId);
-            }
-        };
-        
-        // Enhance canvas pan for touch
-        const originalStartCanvasPan = this.startCanvasPan;
-        this.startCanvasPan = function(e) {
-            if (e.touches) {
-                const touch = e.touches[0];
-                this.isPanning = true;
-                this.lastPanX = touch.clientX;
-                this.lastPanY = touch.clientY;
-                this.canvas.style.cursor = 'grabbing';
-            } else {
-                originalStartCanvasPan.call(this, e);
             }
         };
     };
     
     // Add touch gestures to canvas
     sf.addTouchGestures = function() {
-        // Create a touch overlay for the canvas
-        const touchOverlay = document.createElement('div');
-        touchOverlay.className = 'sf-touch-overlay';
-        this.canvas.parentElement.appendChild(touchOverlay);
+        const canvasContainer = this.canvas.parentElement;
         
-        // Touch variables for tracking gesture state
-        let touchStartDistance = 0;
-        let touchStartTime = 0;
-        let lastTouchX = 0;
-        let lastTouchY = 0;
-        let isTouching = false;
-        
-        // Handle touch start
-        touchOverlay.addEventListener('touchstart', (e) => {
-            // If we have exactly two touches, prepare for pinch zoom
+        // Handle panning with one finger
+        canvasContainer.addEventListener('touchstart', (e) => {
+            // Only start panning if not touching a block or connector
+            const elementUnderTouch = document.elementFromPoint(
+                e.touches[0].clientX, 
+                e.touches[0].clientY
+            );
+            
+            if (e.touches.length === 1 && 
+                elementUnderTouch && 
+                !elementUnderTouch.closest('.sf-block') && 
+                !elementUnderTouch.closest('.sf-connector-hitbox') &&
+                !elementUnderTouch.closest('.sf-palette-toggle') &&
+                !elementUnderTouch.closest('.sf-palette')) {
+                
+                this.isPanning = true;
+                this.lastPanX = e.touches[0].clientX;
+                this.lastPanY = e.touches[0].clientY;
+                this.canvas.style.cursor = 'grabbing';
+                e.preventDefault();
+            }
+            
+            // Handle pinch-to-zoom with two fingers
             if (e.touches.length === 2) {
+                e.preventDefault();
                 const touch1 = e.touches[0];
                 const touch2 = e.touches[1];
                 
                 // Calculate initial distance between touches
-                touchStartDistance = Math.hypot(
+                this.pinchStartDistance = Math.hypot(
                     touch2.clientX - touch1.clientX,
                     touch2.clientY - touch1.clientY
                 );
@@ -4655,63 +4695,22 @@ function enhanceScriptFlowForMobile() {
                 // Calculate center point for zooming
                 const centerX = (touch1.clientX + touch2.clientX) / 2;
                 const centerY = (touch1.clientY + touch2.clientY) / 2;
-                const canvasRect = this.canvas.parentElement.getBoundingClientRect();
+                const canvasRect = this.canvas.getBoundingClientRect();
                 
-                // Convert to canvas coordinates
+                // Store center point in canvas coordinates
                 this.zoomCenterX = (centerX - canvasRect.left) / this.canvasScale;
                 this.zoomCenterY = (centerY - canvasRect.top) / this.canvasScale;
                 
-                e.preventDefault();
-            } 
-            // Single touch for panning
-            else if (e.touches.length === 1) {
-                const touch = e.touches[0];
-                lastTouchX = touch.clientX;
-                lastTouchY = touch.clientY;
-                touchStartTime = Date.now();
-                isTouching = true;
-                
-                // Only handle panning if not over a block
-                const elementUnderTouch = document.elementFromPoint(touch.clientX, touch.clientY);
-                if (elementUnderTouch && !elementUnderTouch.closest('.sf-block') && 
-                    !elementUnderTouch.closest('.sf-connector-hitbox') &&
-                    !elementUnderTouch.closest('.sf-palette-toggle')) {
-                    this.startCanvasPan(e);
-                }
+                this.isPinching = true;
             }
-        });
+        }, { passive: false });
         
-        // Handle touch move
-        touchOverlay.addEventListener('touchmove', (e) => {
-            // Pinch zoom with two fingers
-            if (e.touches.length === 2) {
-                const touch1 = e.touches[0];
-                const touch2 = e.touches[1];
-                
-                // Calculate new distance and determine zoom direction
-                const currentDistance = Math.hypot(
-                    touch2.clientX - touch1.clientX,
-                    touch2.clientY - touch1.clientY
-                );
-                
-                // Calculate zoom delta based on distance change
-                const zoomFactor = currentDistance / touchStartDistance - 1;
-                const zoomDelta = zoomFactor * 0.3; // Scale the zoom effect
-                
-                // Apply zoom at the center point
-                if (Math.abs(zoomDelta) > 0.01) {
-                    this.zoomCanvasAroundPoint(zoomDelta, this.zoomCenterX, this.zoomCenterY);
-                    touchStartDistance = currentDistance; // Update for next move
-                }
-                
+        canvasContainer.addEventListener('touchmove', (e) => {
+            // Handle panning with one finger
+            if (this.isPanning && e.touches.length === 1) {
                 e.preventDefault();
-            } 
-            // Pan with one finger
-            else if (e.touches.length === 1 && this.isPanning) {
-                // Handle pan movement
                 const touch = e.touches[0];
                 
-                // Update canvas position
                 const deltaX = (touch.clientX - this.lastPanX) / this.canvasScale;
                 const deltaY = (touch.clientY - this.lastPanY) / this.canvasScale;
                 
@@ -4722,46 +4721,132 @@ function enhanceScriptFlowForMobile() {
                 
                 this.lastPanX = touch.clientX;
                 this.lastPanY = touch.clientY;
-                
+            }
+            
+            // Handle pinch-to-zoom with two fingers
+            if (this.isPinching && e.touches.length === 2) {
                 e.preventDefault();
+                const touch1 = e.touches[0];
+                const touch2 = e.touches[1];
+                
+                // Calculate current distance between touches
+                const currentDistance = Math.hypot(
+                    touch2.clientX - touch1.clientX,
+                    touch2.clientY - touch1.clientY
+                );
+                
+                // Calculate zoom factor
+                const scaleFactor = currentDistance / this.pinchStartDistance;
+                
+                // Apply zoom with center point from touchstart
+                if (Math.abs(scaleFactor - 1) > 0.02) {
+                    const newScale = Math.min(Math.max(this.canvasScale * scaleFactor, 0.2), 3);
+                    const scaleDelta = newScale - this.canvasScale;
+                    
+                    // Apply zoom around the center point
+                    this.zoomCanvasAroundPoint(scaleDelta, this.zoomCenterX, this.zoomCenterY);
+                    
+                    // Update start distance for next move
+                    this.pinchStartDistance = currentDistance;
+                }
+                
+                // Update center point for next zoom operation
+                const centerX = (touch1.clientX + touch2.clientX) / 2;
+                const centerY = (touch1.clientY + touch2.clientY) / 2;
+                const canvasRect = this.canvas.getBoundingClientRect();
+                
+                this.zoomCenterX = (centerX - canvasRect.left) / this.canvasScale;
+                this.zoomCenterY = (centerY - canvasRect.top) / this.canvasScale;
+            }
+        }, { passive: false });
+        
+        canvasContainer.addEventListener('touchend', (e) => {
+            // End panning
+            if (this.isPanning && e.touches.length === 0) {
+                this.isPanning = false;
+                this.canvas.style.cursor = 'default';
+            }
+            
+            // End pinching
+            if (this.isPinching && e.touches.length < 2) {
+                this.isPinching = false;
             }
         });
         
-        // Handle touch end
-        touchOverlay.addEventListener('touchend', (e) => {
-            // End of two-finger gesture
-            if (e.touches.length < 2) {
-                touchStartDistance = 0;
-            }
-            
-            // End of panning
-            if (e.touches.length === 0 && this.isPanning) {
-                this.isPanning = false;
-                this.canvas.style.cursor = 'default';
+        // Implement long-press for context menu
+        let longPressTimer;
+        let longPressX, longPressY;
+        
+        canvasContainer.addEventListener('touchstart', (e) => {
+            if (e.touches.length === 1) {
+                longPressX = e.touches[0].clientX;
+                longPressY = e.touches[0].clientY;
                 
-                // Detect quick tap for context menu (tap and hold)
-                const touchDuration = Date.now() - touchStartTime;
-                if (touchDuration > 500 && touchDuration < 1000 && isTouching) {
-                    // Create a simulated right-click event
-                    const contextEvent = new MouseEvent('contextmenu', {
-                        bubbles: true,
-                        cancelable: true,
-                        clientX: lastTouchX,
-                        clientY: lastTouchY
-                    });
+                longPressTimer = setTimeout(() => {
+                    const elementAtPoint = document.elementFromPoint(longPressX, longPressY);
                     
-                    // Dispatch the context menu event
-                    document.elementFromPoint(lastTouchX, lastTouchY)?.dispatchEvent(contextEvent);
+                    if (elementAtPoint) {
+                        // Create and dispatch a context menu event
+                        const contextEvent = new MouseEvent('contextmenu', {
+                            bubbles: true,
+                            cancelable: true,
+                            clientX: longPressX,
+                            clientY: longPressY,
+                            view: window
+                        });
+                        
+                        elementAtPoint.dispatchEvent(contextEvent);
+                    }
+                }, 750); // 750ms for long press
+            }
+        });
+        
+        canvasContainer.addEventListener('touchmove', (e) => {
+            // Cancel long press if moved too far
+            if (longPressTimer && e.touches.length === 1) {
+                const moveX = e.touches[0].clientX;
+                const moveY = e.touches[0].clientY;
+                
+                const moveDistance = Math.hypot(
+                    moveX - longPressX,
+                    moveY - longPressY
+                );
+                
+                if (moveDistance > 10) {
+                    clearTimeout(longPressTimer);
+                    longPressTimer = null;
                 }
             }
-            
-            isTouching = false;
+        });
+        
+        canvasContainer.addEventListener('touchend', () => {
+            if (longPressTimer) {
+                clearTimeout(longPressTimer);
+                longPressTimer = null;
+            }
         });
     };
     
     // Enhance connection handling for touch
     sf.enhanceTouchConnections = function() {
-        // Enhance start connection drag
+        // Add touch handlers to all connectors for creating connections
+        document.querySelectorAll('.sf-connector-hitbox').forEach(hitbox => {
+            hitbox.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                
+                const connector = hitbox.querySelector('.sf-connector');
+                if (connector) {
+                    const blockId = connector.dataset.blockId;
+                    const connectorType = connector.dataset.connectorType;
+                    const connectorName = connector.dataset.connectorName;
+                    
+                    this.startConnectionDrag(e, blockId, connectorType, connectorName);
+                }
+            });
+        });
+        
+        // Enhance start connection drag for touch events
         const originalStartConnectionDrag = this.startConnectionDrag;
         this.startConnectionDrag = function(e, blockId, connectorType, connectorName) {
             if (e.touches) {
@@ -4772,38 +4857,40 @@ function enhanceScriptFlowForMobile() {
                     clientY: touch.clientY
                 };
                 originalStartConnectionDrag.call(this, simulatedEvent, blockId, connectorType, connectorName);
+                
+                // Add specific touch event handlers for connection dragging
+                const touchMoveHandler = (moveEvent) => {
+                    if (this.isCreatingConnection) {
+                        moveEvent.preventDefault();
+                        this.updateTempConnection({
+                            clientX: moveEvent.touches[0].clientX,
+                            clientY: moveEvent.touches[0].clientY
+                        });
+                    }
+                };
+                
+                const touchEndHandler = (endEvent) => {
+                    if (this.isCreatingConnection) {
+                        this.finishConnection({
+                            clientX: endEvent.changedTouches[0].clientX,
+                            clientY: endEvent.changedTouches[0].clientY
+                        });
+                        this.isCreatingConnection = false;
+                        
+                        if (this.tempConnection) {
+                            this.tempConnection.remove();
+                            this.tempConnection = null;
+                        }
+                    }
+                    
+                    document.removeEventListener('touchmove', touchMoveHandler);
+                    document.removeEventListener('touchend', touchEndHandler);
+                };
+                
+                document.addEventListener('touchmove', touchMoveHandler, { passive: false });
+                document.addEventListener('touchend', touchEndHandler);
             } else {
                 originalStartConnectionDrag.call(this, e, blockId, connectorType, connectorName);
-            }
-        };
-        
-        // Update temp connection for touch
-        const originalUpdateTempConnection = this.updateTempConnection;
-        this.updateTempConnection = function(e) {
-            if (e.touches) {
-                const touch = e.touches[0];
-                const simulatedEvent = {
-                    clientX: touch.clientX,
-                    clientY: touch.clientY
-                };
-                originalUpdateTempConnection.call(this, simulatedEvent);
-            } else {
-                originalUpdateTempConnection.call(this, e);
-            }
-        };
-        
-        // Finish connection for touch
-        const originalFinishConnection = this.finishConnection;
-        this.finishConnection = function(e) {
-            if (e.changedTouches) {
-                const touch = e.changedTouches[0];
-                const simulatedEvent = {
-                    clientX: touch.clientX,
-                    clientY: touch.clientY
-                };
-                originalFinishConnection.call(this, simulatedEvent);
-            } else {
-                originalFinishConnection.call(this, e);
             }
         };
     };
@@ -4822,6 +4909,11 @@ function enhanceScriptFlowForMobile() {
                 <div class="sf-property-content" id="sf-property-content"></div>
             `;
             this.editor.appendChild(this.propertyPanel);
+            
+            // Add close button functionality
+            this.propertyPanel.querySelector('#sf-close-properties').addEventListener('click', () => {
+                this.propertyPanel.classList.remove('active');
+            });
         }
         
         // Update the canvas container to handle different screen sizes
@@ -4837,9 +4929,8 @@ function enhanceScriptFlowForMobile() {
                 if (this.modal) this.modal.classList.remove('sf-mobile-modal');
             }
             
-            // Make sure palette has correct state but don't change if user has toggled
+            // Make sure palette has correct state
             if (isMobile && !document.querySelector('.sf-palette-toggle')) {
-                // Force proper initialization
                 this.initMobilePalette();
             }
             
@@ -4870,6 +4961,43 @@ function enhanceScriptFlowForMobile() {
         
         // Add resize listener
         window.addEventListener('resize', updateLayout);
+        
+        // Re-bind touch handlers when new blocks are added
+        const originalCreateBlockElement = this.createBlockElement;
+        this.createBlockElement = function(block) {
+            const blockEl = originalCreateBlockElement.call(this, block);
+            
+            // Add touch handlers to the new block
+            blockEl.addEventListener('touchstart', (e) => {
+                // Don't drag if touching inside inputs or resizing
+                if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT' || 
+                    e.target.classList.contains('sf-resize-handle')) {
+                    return;
+                }
+                
+                const blockId = blockEl.id.split('-')[1];
+                this.startExistingBlockDrag(e, blockId);
+            });
+            
+            // Add touch handlers to connectors
+            blockEl.querySelectorAll('.sf-connector-hitbox').forEach(hitbox => {
+                hitbox.addEventListener('touchstart', (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    
+                    const connector = hitbox.querySelector('.sf-connector');
+                    if (connector) {
+                        const blockId = connector.dataset.blockId;
+                        const connectorType = connector.dataset.connectorType;
+                        const connectorName = connector.dataset.connectorName;
+                        
+                        this.startConnectionDrag(e, blockId, connectorType, connectorName);
+                    }
+                });
+            });
+            
+            return blockEl;
+        };
     };
     
     // Apply mobile specific CSS
@@ -4882,98 +5010,61 @@ function enhanceScriptFlowForMobile() {
         const style = document.createElement('style');
         style.id = styleId;
         style.textContent = `
-            /* Mobile styles for ScriptFlow */
+            /* Mobile-specific touchability improvements */
             @media (max-width: 768px) {
-                .sf-editor {
-                    width: 100% !important;
-                    height: 100% !important;
-                    max-width: none !important;
-                    display: flex !important;
-                    flex-direction: column !important;
-                    overflow: hidden !important;
-                }
-                
-                .sf-header, .sf-footer {
-                    flex-shrink: 0;
-                }
-                
-                .sf-canvas-container {
-                    flex: 1 !important;
+                /* Make connectors and hitboxes more touch-friendly */
+                .sf-connector-hitbox {
+                    width: 36px !important;
+                    height: 36px !important;
                     position: relative !important;
-                    overflow: hidden !important;
                 }
                 
-                .sf-palette {
-                    position: fixed !important;
-                    left: 0 !important;
-                    top: 0 !important;
-                    bottom: 0 !important;
-                    width: 80% !important;
-                    max-width: 300px !important;
-                    height: 100% !important;
-                    z-index: 1000 !important;
-                    transform: translateX(-100%) !important;
-                    transition: transform 0.3s ease !important;
-                    box-shadow: 0 0 15px rgba(0,0,0,0.3) !important;
-                    overflow-y: auto !important;
+                .sf-connector {
+                    width: 18px !important;
+                    height: 18px !important;
+                    border-width: 3px !important;
                 }
                 
-                .sf-palette.open {
-                    transform: translateX(0) !important;
+                /* Increase block padding for better touch targets */
+                .sf-block {
+                    padding: 10px !important;
+                    min-width: 200px !important;
+                    min-height: 120px !important;
                 }
                 
-                .sf-palette-toggle {
-                    position: fixed !important;
-                    left: 10px !important;
-                    top: 70px !important;
-                    width: 40px !important;
-                    height: 40px !important;
-                    background: var(--sf-panel-bg) !important;
-                    border: 1px solid var(--sf-panel-border) !important;
-                    border-radius: 4px !important;
-                    display: flex !important;
-                    align-items: center !important;
-                    justify-content: center !important;
-                    z-index: 1001 !important;
-                    cursor: pointer !important;
-                    font-size: 20px !important;
-                    box-shadow: 0 2px 8px rgba(0,0,0,0.2) !important;
-                }
-                
-                .sf-touch-overlay {
-                    position: absolute !important;
-                    top: 0 !important;
-                    left: 0 !important;
-                    width: 100% !important;
-                    height: 100% !important;
-                    z-index: 10 !important;
+                /* Prevent zoom on double-tap */
+                .sf-canvas-container {
                     touch-action: none !important;
                 }
                 
-                .sf-block {
-                    min-width: 160px !important;
-                    min-height: 100px !important;
+                /* Increase touch targets for context menu */
+                .sf-context-menu-item {
+                    padding: 12px 16px !important;
+                    min-height: 48px !important;
+                    font-size: 16px !important;
                 }
                 
-                .sf-property-panel {
-                    position: fixed !important;
-                    left: 5% !important;
-                    top: 10% !important;
-                    width: 90% !important;
-                    max-height: 80% !important;
-                    z-index: 1002 !important;
-                    overflow-y: auto !important;
+                /* Make palette items easier to tap */
+                .sf-block-template {
+                    padding: 14px 16px !important;
+                    min-height: 50px !important;
+                    font-size: 16px !important;
                 }
                 
-                .sf-context-menu {
-                    position: fixed !important;
-                    z-index: 1003 !important;
-                }
-                
+                /* Increase padding in popups and dialogs */
+                .sf-property-panel,
                 .sf-dialog {
-                    width: 95% !important;
-                    height: 90vh !important;
-                    max-width: none !important;
+                    padding: 16px !important;
+                }
+                
+                /* Make sure palette toggle is easily tappable */
+                .sf-palette-toggle {
+                    position: fixed !important;
+                    z-index: 1001 !important;
+                    width: 48px !important;
+                    height: 48px !important;
+                    font-size: 24px !important;
+                    box-shadow: 0 2px 8px rgba(0,0,0,0.3) !important;
                 }
             }
         `;
