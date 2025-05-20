@@ -1,369 +1,228 @@
 /**
- * Fix for connector nesting behavior in ScriptFlow
- * Ensures proper nesting when connecting 'out' to 'in' connectors
+ * Fix for block nesting in ScriptFlow
+ * Ensures that blocks connected by out->in connectors are properly nested
  */
 
 (function() {
-    // Wait for ScriptFlow to be fully initialized
-    const ensureScriptFlowReady = (callback) => {
-      if (window.scriptFlow) {
-        callback(window.scriptFlow);
-      } else {
-        setTimeout(() => ensureScriptFlowReady(callback), 100);
+  // Wait for ScriptFlow to be fully initialized
+  const ensureScriptFlowReady = (callback) => {
+    if (window.scriptFlow && window.scriptFlow.initialized) {
+      callback(window.scriptFlow);
+    } else {
+      setTimeout(() => ensureScriptFlowReady(callback), 100);
+    }
+  };
+
+  ensureScriptFlowReady((sf) => {
+    console.log("Applying nesting fix to ScriptFlow...");
+
+    // Save reference to the original template processor
+    const originalProcessTemplate = sf.processTemplate;
+
+    // Override the template processor to properly handle child content
+    sf.processTemplate = function(template, block) {
+      // First, ensure the template has a placeholder for child content
+      if (!template.includes('{{childBlocksContent}}') && 
+          block.type !== 'log' && 
+          block.type !== 'console' &&
+          block.type !== 'var' &&
+          block.type !== 'const' &&
+          block.type !== 'let' &&
+          block.type !== 'return' &&
+          block.hasOwnProperty('childBlocksContent') && 
+          block.childBlocksContent) {
+        
+        // For blocks that should have content inside braces
+        if (template.includes('{') && template.includes('}')) {
+          // Find the last closing brace and insert content before it
+          const lastCloseBrace = template.lastIndexOf('}');
+          if (lastCloseBrace !== -1) {
+            template = template.substring(0, lastCloseBrace) + 
+                      '\n  {{childBlocksContent}}\n' + 
+                      template.substring(lastCloseBrace);
+          }
+        } 
+        // For blocks that end with a semicolon
+        else if (template.trim().endsWith(';')) {
+          // Insert before the semicolon
+          template = template.replace(/;$/, '\n  {{childBlocksContent}}\n;');
+        }
+        // Otherwise just append at the end
+        else {
+          template += '\n  {{childBlocksContent}}\n';
+        }
       }
+      
+      // Now process the template with the original function
+      return originalProcessTemplate.call(this, template, block);
     };
-  
-    ensureScriptFlowReady((sf) => {
-      // Override connection finisher to fix nesting behavior
-      const originalFinishConnection = sf.finishConnection;
-      sf.finishConnection = function(e) {
-        if (!this.isCreatingConnection) return;
+
+    // Override the generateFlowCode method
+    sf.generateFlowCode = function() {
+      console.log("Generating flow code with fixed nesting...");
+      
+      // Reset all nesting info
+      this.blocks.forEach(block => {
+        block.childBlocks = [];
+        block.parentBlock = null;
+        block.isNested = false;
+        block.childBlocksContent = '';
+      });
+      
+      // Process connections to establish nesting relationships
+      this.processBlockConnections();
+      
+      // Track processed blocks to avoid duplicates
+      const processedBlocks = new Set();
+      let finalCode = '';
+      
+      // Find root blocks (no incoming connections to 'in' connector and not a class method)
+      const rootBlocks = this.blocks.filter(block => {
+        return !this.connections.some(conn => 
+          conn.destBlockId === block.id && conn.destConnector === 'in'
+        ) && !block.classMethod;
+      });
+      
+      // Process each root block and its children
+      for (const rootBlock of rootBlocks) {
+        // Before generating code, make sure we build all children content
+        this.buildBlockChildContent(rootBlock, 0, processedBlocks);
         
-        // Find if we're over a connector hitbox or connector
-        const element = document.elementFromPoint(e.clientX, e.clientY);
-        if (!element) {
-          // Not over a valid element, remove temp connection
-          if (this.tempConnection) {
-            this.tempConnection.remove();
-            this.tempConnection = null;
-          }
-          this.isCreatingConnection = false;
-          return;
+        // Now generate the code with properly nested children
+        const blockCode = this.generateBlockCode(rootBlock);
+        if (blockCode) {
+          finalCode += blockCode + '\n\n';
+          processedBlocks.add(rootBlock.id);
         }
-        
-        // Check if we're over a connector element or its hitbox
-        const connector = element.closest('.sf-connector') || 
-                        element.querySelector('.sf-connector') || 
-                        element.closest('.sf-connector-hitbox')?.querySelector('.sf-connector');
-                        
-        if (!connector) {
-          // Not over a connector, remove temp connection
-          if (this.tempConnection) {
-            this.tempConnection.remove();
-            this.tempConnection = null;
-          }
-          this.isCreatingConnection = false;
-          return;
-        }
-        
-        const endBlockId = connector.dataset.blockId;
-        const endType = connector.dataset.connectorType;
-        const endName = connector.dataset.connectorName;
-        
-        // Make sure we're connecting from output to input (or input to output)
-        if (this.connectionStartType === endType) {
-          // Cannot connect output to output or input to input
-          if (this.tempConnection) {
-            this.tempConnection.remove();
-            this.tempConnection = null;
-          }
-          this.isCreatingConnection = false;
-          return;
-        }
-        
-        // Determine source and destination based on connector types
-        let sourceBlockId, sourceConnector, destBlockId, destConnector;
-        
-        if (this.connectionStartType === 'output') {
-          sourceBlockId = this.connectionStartBlock.id;
-          sourceConnector = this.connectionStartName;
-          destBlockId = endBlockId;
-          destConnector = endName;
-        } else {
-          sourceBlockId = endBlockId;
-          sourceConnector = endName;
-          destBlockId = this.connectionStartBlock.id;
-          destConnector = this.connectionStartName;
-        }
-        
-        // Check if this connection already exists
-        const existingConnection = this.connections.find(conn => 
-          conn.sourceBlockId === sourceBlockId && 
-          conn.sourceConnector === sourceConnector &&
-          conn.destBlockId === destBlockId &&
-          conn.destConnector === destConnector
+      }
+      
+      return finalCode.trim();
+    };
+
+    // Add a method to build child content recursively
+    sf.buildBlockChildContent = function(block, indentLevel = 0, processedBlocks = new Set()) {
+      if (!block || processedBlocks.has(block.id)) return '';
+      
+      // For safety, check for circular references
+      if (this._checkingBlockPath && this._checkingBlockPath.has(block.id)) {
+        console.warn(`Circular reference detected for block ${block.id}. Skipping.`);
+        return '';
+      }
+      
+      // Initialize path tracking if needed
+      if (!this._checkingBlockPath) this._checkingBlockPath = new Set();
+      this._checkingBlockPath.add(block.id);
+      
+      try {
+        // Find all out->in connections from this block
+        const childConnections = this.connections.filter(conn => 
+          conn.sourceBlockId === block.id && 
+          conn.sourceConnector === 'out' && 
+          conn.destConnector === 'in'
         );
         
-        if (existingConnection) {
-          // Connection already exists, cleanup
-          if (this.tempConnection) {
-            this.tempConnection.remove();
-            this.tempConnection = null;
-          }
-          this.isCreatingConnection = false;
-          return;
-        }
+        // Extract child blocks
+        const childBlocks = childConnections.map(conn => 
+          this.blocks.find(b => b.id === conn.destBlockId)
+        ).filter(b => b != null);
         
-        // Create new connection
-        const connectionId = this.generateUniqueId();
-        const connection = {
-          id: connectionId,
-          sourceBlockId,
-          sourceConnector,
-          destBlockId,
-          destConnector
-        };
+        // Store the child blocks array for use in templates
+        block.childBlocks = childBlocks.map(b => b.id);
         
-        this.connections.push(connection);
+        // Set proper indentation
+        const indent = '  '.repeat(indentLevel + 1);
         
-        // Remove temporary connection line
-        if (this.tempConnection) {
-          this.tempConnection.remove();
-          this.tempConnection = null;
-        }
+        // Build content for all children
+        let childContent = '';
         
-        // Show success notification
-        this.showNotification(`Connected ${sourceConnector} to ${destConnector}`, 'success');
-        
-        // Render the new connection
-        this.renderConnection(connection);
-        
-        // Apply nesting specifically for flow connections
-        if ((sourceConnector === 'out' && destConnector === 'in') || 
-            (sourceConnector === 'in' && destConnector === 'out')) {
-          // Ensure proper nesting by forcing a rebuild of the block hierarchy
-          this.processBlockConnections();
+        for (const childBlock of childBlocks) {
+          // Skip if we've already processed this block
+          if (processedBlocks.has(childBlock.id)) continue;
           
-          // Apply visual nesting indicators
-          const sourceBlock = this.blocks.find(b => b.id === sourceBlockId);
-          const destBlock = this.blocks.find(b => b.id === destBlockId);
+          // Mark this child as having a parent
+          childBlock.parentBlock = block.id;
+          childBlock.isNested = true;
           
-          if (sourceBlock && destBlock) {
-            // Create parent-child relationship
-            if (sourceConnector === 'out' && destConnector === 'in') {
-              // Source is parent, destination is child
-              if (!sourceBlock.childBlocks) sourceBlock.childBlocks = [];
-              if (!sourceBlock.childBlocks.includes(destBlock.id)) {
-                sourceBlock.childBlocks.push(destBlock.id);
-              }
-              destBlock.parentBlock = sourceBlock.id;
-              destBlock.isNested = true;
-            } else {
-              // Destination is parent, source is child
-              if (!destBlock.childBlocks) destBlock.childBlocks = [];
-              if (!destBlock.childBlocks.includes(sourceBlock.id)) {
-                destBlock.childBlocks.push(sourceBlock.id);
-              }
-              sourceBlock.parentBlock = destBlock.id;
-              sourceBlock.isNested = true;
-            }
+          // Process this child's own children first
+          this.buildBlockChildContent(childBlock, indentLevel + 1, processedBlocks);
+          
+          // Generate the code for this child
+          const childBlockCode = this.generateBlockCode(childBlock);
+          if (childBlockCode) {
+            childContent += indent + childBlockCode + '\n';
+            processedBlocks.add(childBlock.id);
           }
         }
         
-        // End connection creation
-        this.isCreatingConnection = false;
-      };
-  
-      // Enhanced processBlockConnections to ensure proper nesting
+        // Store the generated child content in the block
+        block.childBlocksContent = childContent;
+        
+        return childContent;
+      } finally {
+        // Always clean up path tracking
+        this._checkingBlockPath.delete(block.id);
+      }
+    };
+
+    // Try to fix block templates if they exist
+    try {
+      if (sf.blockTemplates && Array.isArray(sf.blockTemplates)) {
+        // Fix special case for if statements
+        const ifIdx = sf.blockTemplates.findIndex(t => t && t.type === 'if');
+        if (ifIdx !== -1) {
+          // Make sure the if block template properly includes child content
+          sf.blockTemplates[ifIdx] = {
+            ...sf.blockTemplates[ifIdx],
+            template: 'if ({{condition}}) {\n  {{childBlocksContent}}\n}'
+          };
+        }
+        
+        // Fix special case for alert statements
+        const alertIdx = sf.blockTemplates.findIndex(t => t && t.type === 'alert');
+        if (alertIdx !== -1) {
+          // Make sure alert properly handles its message
+          sf.blockTemplates[alertIdx] = {
+            ...sf.blockTemplates[alertIdx],
+            template: 'alert({{message}})'
+          };
+        }
+      }
+    } catch (e) {
+      console.error("Error fixing block templates:", e);
+    }
+
+    // Make sure processBlockConnections can handle connections properly
+    if (!sf.processBlockConnections) {
       sf.processBlockConnections = function() {
-        // Reset all nesting relationships before rebuilding them
+        console.log("Setting up block connections");
+        // Add basic structure handling
         this.blocks.forEach(block => {
-          block.isNested = false;
-          block.isConnectedToClass = false;
           block.childBlocks = [];
           block.parentBlock = null;
-          block.classMethod = false;
         });
         
-        // First pass: Handle flow connections (out->in)
+        // Process out->in connections
         for (const connection of this.connections) {
-          // Process flow connections first to establish parent-child relationships
           if (connection.sourceConnector === 'out' && connection.destConnector === 'in') {
             const sourceBlock = this.blocks.find(b => b.id === connection.sourceBlockId);
             const destBlock = this.blocks.find(b => b.id === connection.destBlockId);
             
             if (sourceBlock && destBlock) {
-              // Mark destination block as nested
-              destBlock.isNested = true;
+              sourceBlock.childBlocks.push(destBlock.id);
               destBlock.parentBlock = sourceBlock.id;
-              
-              // Add destination to source's child blocks
-              if (!sourceBlock.childBlocks) sourceBlock.childBlocks = [];
-              if (!sourceBlock.childBlocks.includes(destBlock.id)) {
-                sourceBlock.childBlocks.push(destBlock.id);
-              }
-              
-              // Apply visual indication of nesting
-              const destElement = document.getElementById(`block-${destBlock.id}`);
-              if (destElement) {
-                destElement.dataset.nested = "true";
-              }
+              destBlock.isNested = true;
             }
           }
         }
-        
-        // Second pass: Handle class structure connections
-        for (const connection of this.connections) {
-          const sourceBlock = this.blocks.find(b => b.id === connection.sourceBlockId);
-          const destBlock = this.blocks.find(b => b.id === connection.destBlockId);
-          
-          if (!sourceBlock || !destBlock) continue;
-          
-          // Class connection (any connector from class to a method-type block)
-          if (sourceBlock.type === 'class') {
-            // These are blocks that should be part of the class
-            if (destBlock.type === 'constructor' || 
-                destBlock.type === 'function' ||
-                destBlock.type === 'getter' ||
-                destBlock.type === 'setter') {
-              
-              destBlock.isConnectedToClass = true;
-              destBlock.classMethod = true;
-            }
-          }
-        }
-        
-        // Third pass: Handle data connections for inputs/outputs
-        for (const connection of this.connections) {
-          // Skip flow connections already handled
-          if (connection.destConnector === 'in' || connection.sourceConnector === 'out') continue;
-          
-          const sourceBlock = this.blocks.find(b => b.id === connection.sourceBlockId);
-          const destBlock = this.blocks.find(b => b.id === connection.destBlockId);
-          
-          if (sourceBlock && destBlock) {
-            // Set input value on destination block
-            if (!destBlock.inputs) destBlock.inputs = {};
-            destBlock.inputs[connection.destConnector] = sourceBlock.id;
-            
-            // Set output target on source block
-            if (!sourceBlock.outputs) sourceBlock.outputs = {};
-            sourceBlock.outputs[connection.sourceConnector] = destBlock.id;
-          }
-        }
-        
-        // Add CSS styling for nested blocks
-        this.applyNestingStyles();
       };
-      
-      // Add visual styling for nested blocks
-      sf.applyNestingStyles = function() {
-        // Remove existing nesting styles
-        const existingStyle = document.getElementById('sf-nesting-styles');
-        if (existingStyle) existingStyle.remove();
-        
-        // Create styles for nesting indicators
-        const style = document.createElement('style');
-        style.id = 'sf-nesting-styles';
-        style.textContent = `
-          /* Visual indicator for nested blocks */
-          .sf-block[data-nested="true"] {
-            border-left: 3px solid rgba(52, 152, 219, 0.9) !important;
-          }
-          
-          /* Connection styling for flow vs data connections */
-          .sf-connection-path[data-connection-type="flow"] {
-            stroke-dasharray: none !important;
-            stroke-width: 2.5px !important;
-          }
-          
-          .sf-connection-path[data-connection-type="data"] {
-            stroke-dasharray: none !important;
-            stroke-width: 2px !important;
-          }
-        `;
-        document.head.appendChild(style);
-        
-        // Apply nested attribute to all blocks
-        this.blocks.forEach(block => {
-          const blockEl = document.getElementById(`block-${block.id}`);
-          if (blockEl) {
-            if (block.isNested) {
-              blockEl.setAttribute('data-nested', 'true');
-            } else {
-              blockEl.removeAttribute('data-nested');
-            }
-          }
-        });
-      };
-      
-      // Override the code generation process to respect the nesting
-      sf.generateFlowCode = function() {
-        // Apply correct nesting before generating code
-        this.processBlockConnections();
-        
-        // Create structures to track processed blocks
-        const processedBlocks = new Set();
-        let finalCode = '';
-        
-        // Find root blocks (blocks with no incoming connections to their 'in' connector)
-        const rootBlocks = this.blocks.filter(block => {
-          // A root block doesn't have any connection to its 'in' connector
-          const hasInConnection = this.connections.some(conn => 
-            conn.destBlockId === block.id && conn.destConnector === 'in'
-          );
-          
-          return !hasInConnection;
-        });
-        
-        // Recursive function to generate code for a block and its nested children
-        const generateBlockTreeCode = (block, depth = 0) => {
-          if (!block || processedBlocks.has(block.id)) return '';
-          
-          // Mark this block as processed
-          processedBlocks.add(block.id);
-          
-          // Process child blocks that are connected via out->in (nested blocks)
-          if (block.childBlocks && block.childBlocks.length > 0) {
-            this.processChildBlocksForBlock(block, processedBlocks, generateBlockTreeCode, depth);
-          }
-          
-          // Generate code for this block using its template
-          return this.generateBlockCode(block);
-        };
-        
-        // Process children for specific block and collect their content
-        this.processChildBlocksForBlock = (block, processedBlocks, generateBlockTreeCode, depth) => {
-          if (!block.childBlocks || block.childBlocks.length === 0) {
-            block.childBlocksContent = '';
-            return;
-          }
-          
-          let childContent = '';
-          for (const childId of block.childBlocks) {
-            const childBlock = this.blocks.find(b => b.id === childId);
-            if (!childBlock) continue;
-            
-            // Generate code for this child
-            const childCode = generateBlockTreeCode(childBlock, depth + 1);
-            if (childCode && childCode.trim()) {
-              childContent += childCode + '\n';
-            }
-          }
-          
-          block.childBlocksContent = childContent.trim();
-        };
-        
-        // Start with root blocks
-        if (rootBlocks.length > 0) {
-          for (const rootBlock of rootBlocks) {
-            // Skip blocks that have already been processed
-            if (processedBlocks.has(rootBlock.id)) continue;
-            
-            const blockCode = generateBlockTreeCode(rootBlock);
-            if (blockCode && blockCode.trim()) {
-              finalCode += blockCode + '\n\n';
-            }
-          }
-        } else if (this.blocks.length > 0) {
-          // If no root blocks but we have blocks, just process them all
-          for (const block of this.blocks) {
-            if (processedBlocks.has(block.id)) continue;
-            
-            const blockCode = generateBlockTreeCode(block);
-            if (blockCode && blockCode.trim()) {
-              finalCode += blockCode + '\n\n';
-            }
-          }
-        }
-        
-        return finalCode.trim();
-      };
-      
-      // Apply the fixed connection processing immediately
+    }
+
+    // Apply the fix immediately to ensure connection structure is updated
+    try {
       sf.processBlockConnections();
-      sf.applyNestingStyles();
-      
-      console.log("Fixed nesting for out->in connections in ScriptFlow");
-    });
-  })();
+      console.log("Fixed block nesting in ScriptFlow");
+    } catch (e) {
+      console.error("Error applying nesting fix:", e);
+    }
+  });
+})();

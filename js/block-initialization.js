@@ -53,11 +53,11 @@ function initializeBlockLibrary() {
                     ],
                     template: (block) => {
                         const className = block.options.name || 'MyClass';
-                        // Generate the class with proper indentation for methods
-                        let classBody = block.childBlocksContent || '';
+                        const extendsClass = block.options.extends ? ` extends ${block.options.extends}` : '';
                         
-                        // Wrap in class declaration
-                        return `class ${className} {\n  ${classBody.split('\n').join('\n  ')}\n}`;
+                        return `class ${className}${extendsClass} {
+                    ${block.childBlocksContent ? block.childBlocksContent : '  // Class content'}
+                    }`;
                     }
                 },
                 constructor: {
@@ -75,15 +75,12 @@ function initializeBlockLibrary() {
                         }
                     ],
                     template: (block) => {
-                        // Gather parameters and format them
                         const params = block.options.parameters ? 
                             block.options.parameters.map(p => p.name).join(', ') : '';
-                            
-                        // Get content for method body
-                        const childContent = block.childBlocksContent || '// Constructor code';
                         
-                        // Generate proper constructor - no "function" keyword
-                        return `constructor(${params}) {\n    ${childContent.split('\n').join('\n    ')}\n  }`;
+                        return `constructor(${params}) {
+                    ${block.childBlocksContent ? block.childBlocksContent : '  // Constructor body'}
+                    }`;
                     }
                 },
                 function: {
@@ -102,22 +99,13 @@ function initializeBlockLibrary() {
                         },
                     ],
                     template: (block) => {
-                        // Gather parameters and format them
+                        const name = block.options.name || 'myFunction';
                         const params = block.options.parameters ? 
                             block.options.parameters.map(p => p.name).join(', ') : '';
-                            
-                        // Get content for method body
-                        const childContent = block.childBlocksContent || '// Method code';
-                        const name = block.options.name || 'myCustomScript';
                         
-                        // Check if this is a class method
-                        if (block.classMethod || block.isConnectedToClass) {
-                            // Class method without "function" keyword
-                            return `${name}(${params}) {\n    ${childContent.split('\n').join('\n    ')}\n  }`;
-                        } else {
-                            // Regular standalone function
-                            return `function ${name}(${params}) {\n  ${childContent.split('\n').join('\n  ')}\n}`;
-                        }
+                        return `function ${name}(${params}) {
+                    ${block.childBlocksContent ? block.childBlocksContent : '  // Function body'}
+                    }`;
                     }
                 },
                 bridge: {
@@ -209,8 +197,8 @@ function initializeBlockLibrary() {
                 number: {
                     name: "Number",
                     category: "inputs",
-                    inputs: ["in"],
-                    outputs: ["out", "value"],
+                    inputs: [],  // Remove 'in'
+                    outputs: ["value"],  // Remove 'out'
                     options: [
                         { name: "value", type: "number", default: "0" }
                     ],
@@ -219,8 +207,8 @@ function initializeBlockLibrary() {
                 text: {
                     name: "Text",
                     category: "inputs",
-                    inputs: ["in"],
-                    outputs: ["out", "value"],
+                    inputs: [],  // Remove 'in'
+                    outputs: ["value"],  // Remove 'out'
                     options: [
                         { name: "value", type: "text", default: "text" }
                     ],
@@ -229,8 +217,8 @@ function initializeBlockLibrary() {
                 boolean: {
                     name: "Boolean",
                     category: "inputs",
-                    inputs: ["in"],
-                    outputs: ["out", "value"],
+                    inputs: [],  // Remove 'in'
+                    outputs: ["value"],  // Remove 'out'
                     options: [
                         { name: "value", type: "select", options: ["true", "false"], default: "true" }
                     ],
@@ -272,31 +260,18 @@ function initializeBlockLibrary() {
         logic: {
             name: "Logic",
             blocks: {
+                // If condition block
                 if: {
                     name: "If Condition",
                     category: "logic",
                     inputs: ["in", "condition"],
-                    outputs: ["out", "true", "false"],
+                    outputs: ["out"],
                     template: (block) => {
-                        // Get condition from input or a connected block
                         const condition = block.inputs.condition || 'true';
                         
-                        // Get content for true branch
-                        const trueBranch = block.outputs.true || '';
-                        
-                        // Get content for false branch if it exists
-                        const falseBranch = block.outputs.false || '';
-                        
-                        let code = `if (${condition}) {\n`;
-                        code += `  ${trueBranch.split('\n').join('\n  ')}\n`;
-                        code += `}`;
-                        
-                        // Add else branch if present
-                        if (falseBranch && falseBranch.trim()) {
-                            code += ` else {\n  ${falseBranch.split('\n').join('\n  ')}\n}`;
-                        }
-                        
-                        return code;
+                        return `if (${condition}) {
+                ${block.childBlocksContent || '// Conditional body'}
+                }`;
                     }
                 },
                 ternary: {
@@ -496,10 +471,11 @@ function initializeBlockLibrary() {
                     ],
                     template: (block) => {
                         const iterations = block.inputs.iterations || '10';
-                        const body = '// Child blocks go here';
                         const counter = block.options.counter || 'i';
                         
-                        return `for(let ${counter} = 0; ${counter} < ${iterations}; ${counter}++) {\n  ${body}\n}`;
+                        return `for(let ${counter} = 0; ${counter} < ${iterations}; ${counter}++) {
+                  ${block.childBlocksContent || '// Loop body'}
+                }`;
                     }
                 },
                 while: {
@@ -509,9 +485,10 @@ function initializeBlockLibrary() {
                     outputs: ["out"],
                     template: (block) => {
                         const condition = block.inputs.condition || 'true';
-                        const body = '// Child blocks go here';
                         
-                        return `while(${condition}) {\n  ${body}\n}`;
+                        return `while(${condition}) {
+    ${block.childBlocksContent || '// Loop body'}
+}`;
                     }
                 },
                 doWhile: {
