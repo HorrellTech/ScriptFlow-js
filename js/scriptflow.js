@@ -5082,3 +5082,556 @@ function enhanceScriptFlowForMobile() {
     
     console.log("ScriptFlow mobile enhancements applied successfully");
 }
+
+function enhanceScriptFlowMobileUsability() {
+    if (!window.scriptFlow) {
+      console.error("ScriptFlow not initialized. Can't apply mobile usability enhancements.");
+      return;
+    }
+    
+    const sf = window.scriptFlow;
+    
+    // Fix 1: Improve context menu for mobile
+    sf.showContextMenu = function(e) {
+      const element = document.elementFromPoint(e.clientX, e.clientY);
+      
+      // Determine context menu content based on element clicked
+      let menuItems = '';
+      let contextData = {};
+      
+      // Check if clicked on a connection
+      if (element.tagName === 'path' && element.parentElement.classList.contains('sf-connection')) {
+        const connectionId = element.parentElement.id.split('-')[1];
+        menuItems = `
+          <div class="sf-context-menu-item" data-action="delete-connection" data-id="${connectionId}">
+            Delete Connection
+          </div>
+        `;
+        contextData.type = 'connection';
+        contextData.id = connectionId;
+      } 
+      // Check if clicked on a block
+      else if (element.closest('.sf-block')) {
+        const block = element.closest('.sf-block');
+        const blockId = block.id.split('-')[1];
+        const blockData = this.blocks.find(b => b.id === blockId);
+        
+        menuItems = `
+          <div class="sf-context-menu-item" data-action="duplicate-block" data-id="${blockId}">
+            Duplicate
+          </div>
+          <div class="sf-context-menu-item" data-action="delete-block" data-id="${blockId}">
+            Delete
+          </div>
+        `;
+        
+        // Add edit subflow option for custom function blocks
+        if (blockData.category === 'customFunction') {
+          menuItems += `
+            <div class="sf-context-menu-separator"></div>
+            <div class="sf-context-menu-item" data-action="edit-subflow" data-id="${blockId}">
+              Edit Function Contents
+            </div>
+          `;
+        }
+        
+        contextData.type = 'block';
+        contextData.id = blockId;
+      } 
+      // Canvas context menu
+      else {
+        const canvasRect = this.canvas.getBoundingClientRect();
+        const canvasX = (e.clientX - canvasRect.left) / this.canvasScale - this.canvasOffsetX;
+        const canvasY = (e.clientY - canvasRect.top) / this.canvasScale - this.canvasOffsetY;
+        
+        menuItems = `
+          <div class="sf-context-menu-item" data-action="add-custom-function" data-x="${canvasX}" data-y="${canvasY}">
+            Add Custom Function
+          </div>
+          <div class="sf-context-menu-item" data-action="paste">
+            Paste
+          </div>
+          <div class="sf-context-menu-separator"></div>
+          <div class="sf-context-menu-item" data-action="select-all">
+            Select All
+          </div>
+          <div class="sf-context-menu-item" data-action="center-view">
+            Center View
+          </div>
+        `;
+        
+        contextData.type = 'canvas';
+        contextData.x = canvasX;
+        contextData.y = canvasY;
+      }
+      
+      // Add content to the context menu
+      this.contextMenu.innerHTML = menuItems;
+      
+      // Position and show the context menu
+      this.contextMenu.style.left = e.clientX + 'px';
+      this.contextMenu.style.top = e.clientY + 'px';
+      this.contextMenu.style.display = 'block';
+      this.contextMenu.dataset.contextType = contextData.type;
+      
+      // Store context data for later use
+      this.contextMenu.contextData = contextData;
+      
+      // Remove old event listeners to prevent duplicates
+      const oldItems = this.contextMenu.querySelectorAll('.sf-context-menu-item');
+      oldItems.forEach(item => {
+        const clone = item.cloneNode(true);
+        item.parentNode.replaceChild(clone, item);
+      });
+      
+      // Add event listeners for mobile and desktop
+      this.contextMenu.querySelectorAll('.sf-context-menu-item').forEach(item => {
+        // Handle both touch and click events
+        const handleAction = () => {
+          const action = item.dataset.action;
+          
+          switch (action) {
+            case 'delete-connection':
+              this.deleteConnection(contextData.id);
+              break;
+            case 'duplicate-block':
+              this.duplicateBlock(contextData.id);
+              break;
+            case 'delete-block':
+              this.deleteBlock(contextData.id);
+              break;
+            case 'edit-subflow':
+              this.editSubflow(contextData.id);
+              break;
+            case 'add-custom-function':
+              this.addCustomFunction(contextData.x, contextData.y);
+              break;
+            case 'paste':
+              // Implement paste functionality
+              break;
+            case 'select-all':
+              // Implement select all functionality
+              break;
+            case 'center-view':
+              this.resetCanvasZoom();
+              break;
+          }
+          
+          // Always hide the menu after action
+          this.contextMenu.style.display = 'none';
+        };
+        
+        // Add both event types for cross-device compatibility
+        item.addEventListener('click', handleAction);
+        item.addEventListener('touchend', (e) => {
+          e.preventDefault(); // Prevent double firing with click
+          handleAction();
+        });
+      });
+      
+      // Add click/touch outside handler to close context menu
+      const closeContextMenu = (event) => {
+        // Don't close if clicking inside the menu
+        if (this.contextMenu.contains(event.target)) return;
+        
+        this.contextMenu.style.display = 'none';
+        document.removeEventListener('click', closeContextMenu);
+        document.removeEventListener('touchstart', closeContextMenu);
+      };
+      
+      // Remove any existing listeners first
+      document.removeEventListener('click', closeContextMenu);
+      document.removeEventListener('touchstart', closeContextMenu);
+      
+      // Add with a slight delay to prevent immediate closing
+      setTimeout(() => {
+        document.addEventListener('click', closeContextMenu);
+        document.addEventListener('touchstart', closeContextMenu);
+      }, 100);
+    };
+    
+    // Fix 2: Improve block palette drag and drop for mobile
+    sf.enhanceMobileBlockDragging = function() {
+      // Make sure we have the palette toggle
+      if (!document.querySelector('.sf-palette-toggle') && this.isMobileDevice()) {
+        this.initMobilePalette();
+      }
+      
+      // Clear existing touch handlers to prevent duplicates
+      document.querySelectorAll('.sf-block-template').forEach(blockTemplate => {
+        const clone = blockTemplate.cloneNode(true);
+        blockTemplate.parentNode.replaceChild(clone, blockTemplate);
+      });
+      
+      // Add enhanced touch handlers
+      document.querySelectorAll('.sf-block-template').forEach(blockTemplate => {
+        blockTemplate.addEventListener('touchstart', (e) => {
+          e.preventDefault(); // Prevent scrolling
+          
+          const categoryKey = blockTemplate.dataset.category;
+          const blockKey = blockTemplate.dataset.type;
+          
+          // Visual feedback
+          blockTemplate.classList.add('sf-dragging');
+          
+          // Store initial touch position
+          const initialTouch = e.touches[0];
+          const touchStartX = initialTouch.clientX;
+          const touchStartY = initialTouch.clientY;
+          let hasDragged = false;
+          
+          const touchMoveHandler = (moveEvent) => {
+            moveEvent.preventDefault();
+            
+            const touch = moveEvent.touches[0];
+            // Calculate distance moved
+            const dx = touch.clientX - touchStartX;
+            const dy = touch.clientY - touchStartY;
+            const distance = Math.sqrt(dx * dx + dy * dy);
+            
+            // Only start drag if moved a significant distance (prevents accidental drags)
+            if (distance > 15 && !hasDragged) {
+              hasDragged = true;
+              // Close palette when dragging starts on mobile
+              if (this.isMobileDevice() && this.palette.classList.contains('open')) {
+                this.palette.classList.remove('open');
+                const toggleBtn = document.querySelector('.sf-palette-toggle');
+                if (toggleBtn) toggleBtn.innerHTML = '&#9776;';
+              }
+              
+              // Create simulated mouse event and start dragging
+              const simulatedEvent = {
+                clientX: touch.clientX,
+                clientY: touch.clientY,
+                preventDefault: () => {}
+              };
+              this.startBlockDrag(simulatedEvent, categoryKey, blockKey);
+            }
+            
+            // Update position during drag if already started
+            if (hasDragged && this.draggedBlock) {
+              this.onCanvasMouseMove({
+                clientX: touch.clientX,
+                clientY: touch.clientY
+              });
+            }
+          };
+          
+          const touchEndHandler = (endEvent) => {
+            blockTemplate.classList.remove('sf-dragging');
+            
+            if (hasDragged && this.draggedBlock) {
+              const touch = endEvent.changedTouches[0];
+              this.onCanvasMouseUp({
+                clientX: touch.clientX,
+                clientY: touch.clientY
+              });
+            }
+            
+            document.removeEventListener('touchmove', touchMoveHandler);
+            document.removeEventListener('touchend', touchEndHandler);
+            document.removeEventListener('touchcancel', touchEndHandler);
+          };
+          
+          document.addEventListener('touchmove', touchMoveHandler, { passive: false });
+          document.addEventListener('touchend', touchEndHandler);
+          document.addEventListener('touchcancel', touchEndHandler);
+        });
+      });
+    };
+    
+    // Fix 3: Fix modal focus issues - prevent background page scrolling/interaction
+    sf.enhanceModalBehavior = function() {
+      const modal = this.modal;
+      if (!modal) return;
+      
+      // Store original document overflow style
+      const originalOverflow = document.body.style.overflow;
+      
+      // Override open modal function
+      const originalOpenModal = this.openModal;
+      this.openModal = function() {
+        // Call original function
+        originalOpenModal.call(this);
+        
+        // Prevent body scrolling when modal is open
+        document.body.style.overflow = 'hidden';
+        
+        // Focus trap - keep focus inside modal
+        const focusableElements = modal.querySelectorAll(
+          'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+        );
+        
+        if (focusableElements.length > 0) {
+          // Focus first element
+          setTimeout(() => {
+            focusableElements[0].focus();
+          }, 100);
+          
+          // Set up focus trap
+          document.addEventListener('keydown', this.trapFocus);
+        }
+        
+        // Prevent touch events from reaching elements behind the modal
+        modal.addEventListener('touchmove', this.handleModalTouchMove, { passive: false });
+        
+        // For mouse wheel events
+        window.addEventListener('wheel', this.handleModalWheel, { passive: false });
+      };
+      
+      // Override close modal function
+      const originalCloseModal = this.closeModal;
+      this.closeModal = function() {
+        // Call original function
+        originalCloseModal.call(this);
+        
+        // Restore original document overflow
+        document.body.style.overflow = originalOverflow;
+        
+        // Remove event listeners
+        document.removeEventListener('keydown', this.trapFocus);
+        modal.removeEventListener('touchmove', this.handleModalTouchMove);
+        window.removeEventListener('wheel', this.handleModalWheel);
+      };
+      
+      // Focus trap handler
+      this.trapFocus = function(e) {
+        // Only trap focus if modal is active
+        if (!modal.classList.contains('active')) return;
+        
+        // Get all focusable elements
+        const focusableElements = modal.querySelectorAll(
+          'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+        );
+        
+        if (focusableElements.length === 0) return;
+        
+        const firstElement = focusableElements[0];
+        const lastElement = focusableElements[focusableElements.length - 1];
+        
+        // Handle Tab key to keep focus inside modal
+        if (e.key === 'Tab') {
+          if (e.shiftKey && document.activeElement === firstElement) {
+            e.preventDefault();
+            lastElement.focus();
+          } else if (!e.shiftKey && document.activeElement === lastElement) {
+            e.preventDefault();
+            firstElement.focus();
+          }
+        }
+        
+        // Handle Escape key
+        if (e.key === 'Escape') {
+          // Check for nested dialogs first
+          const codePreview = document.getElementById('sf-code-preview-dialog');
+          if (codePreview) {
+            codePreview.remove();
+            return;
+          }
+          
+          if (modal.classList.contains('active')) {
+            // Only close if user confirms
+            if (sf.blocks.length > 0) {
+              if (confirm('Are you sure you want to close the editor? Any unsaved changes will be lost.')) {
+                sf.closeModal();
+              }
+            } else {
+              sf.closeModal();
+            }
+          }
+        }
+      };
+      
+      // Handle touch events inside modal
+      this.handleModalTouchMove = function(e) {
+        // Allow scrolling inside scrollable elements within the modal
+        let isScrollable = false;
+        let element = e.target;
+        
+        // Check if we're touching a scrollable element
+        while (element && element !== modal) {
+          const style = window.getComputedStyle(element);
+          const overflow = style.getPropertyValue('overflow-y');
+          
+          if (overflow === 'scroll' || overflow === 'auto') {
+            // Check if the element can actually scroll
+            if (element.scrollHeight > element.clientHeight) {
+              isScrollable = true;
+              break;
+            }
+          }
+          element = element.parentElement;
+        }
+        
+        // Prevent default only if not in a scrollable element
+        if (!isScrollable) {
+          e.preventDefault();
+        }
+      };
+      
+      // Handle wheel events inside modal
+      this.handleModalWheel = function(e) {
+        // If modal is not active, don't interfere
+        if (!modal.classList.contains('active')) return;
+        
+        // Check if the wheel event occurred inside the modal
+        let isInsideModal = false;
+        let element = e.target;
+        
+        while (element) {
+          if (element === modal) {
+            isInsideModal = true;
+            break;
+          }
+          element = element.parentElement;
+        }
+        
+        // If outside modal, prevent event
+        if (!isInsideModal) {
+          e.preventDefault();
+          e.stopPropagation();
+        }
+      };
+    };
+    
+    // Add visual styling for better mobile UX
+    sf.addMobileStyles = function() {
+      const styleId = 'sf-mobile-usability-styles';
+      if (document.getElementById(styleId)) return;
+      
+      const style = document.createElement('style');
+      style.id = styleId;
+      style.textContent = `
+        /* Mobile context menu improvements */
+        .sf-context-menu {
+          position: fixed !important;
+          z-index: 1005 !important;
+          background-color: rgba(42, 42, 42, 0.95) !important;
+          backdrop-filter: blur(10px);
+          -webkit-backdrop-filter: blur(10px);
+          box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5) !important;
+          border: 1px solid rgba(255, 255, 255, 0.2) !important;
+          transform-origin: top left;
+          animation: sf-menu-appear 0.2s ease-out;
+        }
+        
+        @keyframes sf-menu-appear {
+          from { 
+            opacity: 0;
+            transform: scale(0.9);
+          }
+          to { 
+            opacity: 1;
+            transform: scale(1);
+          }
+        }
+        
+        .sf-context-menu-item {
+          transition: background-color 0.15s;
+          display: flex;
+          align-items: center;
+          font-size: 14px !important;
+        }
+        
+        .sf-context-menu-item:active {
+          background-color: rgba(52, 152, 219, 0.8) !important;
+        }
+        
+        /* Dragging feedback for palette items */
+        .sf-block-template.sf-dragging {
+          opacity: 0.7;
+          transform: scale(1.05);
+        }
+        
+        /* Force modal to capture all events */
+        .sf-modal.active {
+          touch-action: none !important;
+        }
+        
+        /* Mobile canvas improvements */
+        @media (max-width: 768px) {
+          /* Make context menu items bigger for touch */
+          .sf-context-menu-item {
+            padding: 14px 20px !important;
+            min-height: 52px !important;
+            font-size: 16px !important;
+          }
+          
+          /* Ensure palette doesn't accidentally close */
+          .sf-palette.open {
+            pointer-events: auto !important;
+            box-shadow: 0 0 30px rgba(0, 0, 0, 0.4) !important;
+          }
+          
+          /* Prevent zooming issues on Safari */
+          .sf-canvas-container {
+            touch-action: none !important;
+            -webkit-overflow-scrolling: auto !important;
+          }
+          
+          /* Make sure modal captures all events */
+          .sf-modal.active {
+            position: fixed !important;
+            top: 0 !important;
+            left: 0 !important;
+            right: 0 !important;
+            bottom: 0 !important;
+          }
+        }
+      `;
+      
+      document.head.appendChild(style);
+    };
+    
+    // Specifically fix mobile Safari scrolling and zooming issues
+    sf.fixMobileSafari = function() {
+      // Detect if we're on iOS
+      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+      
+      if (isIOS) {
+        // Add touch handler to prevent document scrolling
+        document.addEventListener('touchmove', function(e) {
+          if (sf.modal.classList.contains('active')) {
+            // Only allow scrolling in elements that need to scroll
+            let isInScroller = false;
+            let element = e.target;
+            
+            while (element && !isInScroller) {
+              // Check if the element or its parents have scrollable content
+              if (element.classList && 
+                  (element.classList.contains('sf-palette') || 
+                   element.classList.contains('sf-canvas-container') ||
+                   element.classList.contains('sf-property-panel') ||
+                   element.classList.contains('sf-dialog-content'))) {
+                isInScroller = true;
+              }
+              element = element.parentElement;
+            }
+            
+            if (!isInScroller) {
+              e.preventDefault();
+            }
+          }
+        }, { passive: false });
+        
+        // Fix WebKit double-tap zoom
+        const meta = document.querySelector('meta[name="viewport"]');
+        if (meta) {
+          meta.content = 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no';
+        } else {
+          const newMeta = document.createElement('meta');
+          newMeta.name = 'viewport';
+          newMeta.content = 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no';
+          document.head.appendChild(newMeta);
+        }
+      }
+    };
+    
+    // Apply all fixes
+    sf.addMobileStyles();
+    sf.enhanceMobileBlockDragging();
+    sf.enhanceModalBehavior();
+    sf.fixMobileSafari();
+    
+    console.log("ScriptFlow mobile usability enhancements applied successfully");
+  }
