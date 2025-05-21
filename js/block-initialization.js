@@ -43,23 +43,22 @@ function initializeBlockLibrary() {
             name: "Basics",
             blocks: {
                 class: {
-                    name: "class",
+                    name: "Class",
+                    type: "class",
                     category: "basics",
-                    inputs: ["in"],
+                    inputs: [],
                     outputs: ["out"],
                     options: [
-                        { name: "name", type: "text", default: "MyClass" },
-                        { name: "extends", type: "text", default: "" }
+                      { name: "name", type: "text", default: "MyClass" },
+                      { name: "extends", type: "text", default: "" }
                     ],
                     template: (block) => {
-                        const className = block.options.name || 'MyClass';
-                        const extendsClass = block.options.extends ? ` extends ${block.options.extends}` : '';
-                        
-                        return `class ${className}${extendsClass} {
-                    ${block.childBlocksContent ? block.childBlocksContent : '  // Class content'}
-                    }`;
+                      const className = block.options.name || "MyClass";
+                      const extendsStr = block.options.extends ? ` extends ${block.options.extends}` : "";
+                      // Use childBlocksContent for nested code
+                      return `class ${className}${extendsStr} {\n${block.childBlocksContent || "  // Class content"}\n}`;
                     }
-                },
+                  },
                 constructor: {
                     name: "constructor",
                     category: "basics",
@@ -79,35 +78,27 @@ function initializeBlockLibrary() {
                             block.options.parameters.map(p => p.name).join(', ') : '';
                         
                         return `constructor(${params}) {
-                    ${block.childBlocksContent ? block.childBlocksContent : '  // Constructor body'}
+                    ${block.outputs.out + '  // Constructor body'}
                     }`;
                     }
                 },
                 function: {
-                    name: "function",
+                    name: "Function",
+                    type: "function",
                     category: "basics",
                     inputs: ["in"],
-                    outputs: ["out", "return"],
+                    outputs: ["out"],
                     options: [
-                        { name: "name", type: "text", default: "myCustomScript" },
-                        { 
-                            name: "parameters", 
-                            type: "propertyList",
-                            default: [{ name: "param1", value: "" }],
-                            addLabel: "Add Parameter", 
-                            propertyTemplate: { name: "newParam", value: "" } 
-                        },
+                      { name: "name", type: "text", default: "myFunction" },
+                      { name: "parameters", type: "propertyList", default: [], propertyTemplate: { name: "", value: "" }, addLabel: "Add Parameter" }
                     ],
                     template: (block) => {
-                        const name = block.options.name || 'myFunction';
-                        const params = block.options.parameters ? 
-                            block.options.parameters.map(p => p.name).join(', ') : '';
-                        
-                        return `function ${name}(${params}) {
-                    ${block.childBlocksContent ? block.childBlocksContent : '  // Function body'}
-                    }`;
+                      const funcName = block.options.name || "myFunction";
+                      const params = (block.options.parameters || []).map(p => p.name).filter(Boolean).join(", ");
+                      // Use childBlocksContent for nested code
+                      return `function ${funcName}(${params}) {\n${block.childBlocksContent || "  // Function body"}\n}`;
                     }
-                },
+                  },
                 bridge: {
                     name: "bridge",
                     category: "basics",
