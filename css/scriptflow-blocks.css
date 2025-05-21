@@ -455,3 +455,39 @@ path.sf-connection-path[data-connection-type="data"] {
   bottom: 32px !important;
   margin-top: 2px !important;
 }
+
+.sf-connector-container.parent {
+  top: -10px;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.sf-connector-container.child {
+  bottom: -10px;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.sf-connector.parent {
+  background-color: #9b59b6; /* Purple for flow connectors */
+}
+
+.sf-connector.child {
+  background-color: #9b59b6;
+}
+
+.sf-connector.input,
+.sf-connector.output {
+  background-color: #3498db; /* Blue for data connectors */
+}
+
+/* Connection paths */
+.sf-connection-path[data-connection-type="flow"] {
+  stroke: #9b59b6;
+  stroke-width: 2.5px;
+}
+
+.sf-connection-path[data-connection-type="data"] {
+  stroke: #3498db;
+  stroke-width: 2px;
+}

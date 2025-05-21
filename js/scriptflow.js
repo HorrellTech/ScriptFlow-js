@@ -1446,49 +1446,31 @@ class ScriptFlow {
           block.childBlocks = [];
           block.isNested = false;
           block.parentBlock = null;
-          block.classMethod = false;
           block.inputs = {};
         });
         
-        // First pass: Handle flow connections (out->in) for nesting
+        // Process all connections
         for (const connection of this.connections) {
-          if (connection.sourceConnector === 'out' && connection.destConnector === 'in') {
-            const sourceBlock = this.blocks.find(b => b.id === connection.sourceBlockId);
-            const destBlock = this.blocks.find(b => b.id === connection.destBlockId);
-            
-            if (sourceBlock && destBlock) {
-              // Create parent-child relationship
-              sourceBlock.childBlocks.push(destBlock.id);
-              destBlock.isNested = true;
-              destBlock.parentBlock = sourceBlock.id;
-              
-              // Special case for class methods
-              if (sourceBlock.type === 'class' && 
-                  (destBlock.type === 'function' || destBlock.type === 'method' || 
-                   destBlock.type === 'constructor' || destBlock.type === 'getter' || 
-                   destBlock.type === 'setter')) {
-                destBlock.classMethod = true;
-              }
-            }
-          }
-        }
-        
-        // Second pass: Handle data connections for inputs/outputs
-        for (const connection of this.connections) {
-          if (connection.destConnector !== 'in') {
-            const destBlock = this.blocks.find(b => b.id === connection.destBlockId);
-            const sourceBlock = this.blocks.find(b => b.id === connection.sourceBlockId);
-            
-            if (destBlock && sourceBlock) {
-              // Initialize inputs object if needed
-              if (!destBlock.inputs) destBlock.inputs = {};
-              
-              // Store the source block ID for later code generation
-              destBlock.inputs[connection.destConnector] = {
-                blockId: sourceBlock.id,
-                connector: connection.sourceConnector
-              };
-            }
+          const sourceBlock = this.blocks.find(b => b.id === connection.sourceBlockId);
+          const destBlock = this.blocks.find(b => b.id === connection.destBlockId);
+          
+          if (!sourceBlock || !destBlock) continue;
+          
+          // Handle flow connections (child->parent)
+          if (connection.sourceConnector === 'child' && connection.destConnector === 'parent') {
+            // Create parent-child relationship
+            if (!sourceBlock.childBlocks) sourceBlock.childBlocks = [];
+            sourceBlock.childBlocks.push(destBlock.id);
+            destBlock.isNested = true;
+            destBlock.parentBlock = sourceBlock.id;
+          } 
+          // Handle data connections (any other input/output pairs)
+          else {
+            // Store input value from source block's output
+            destBlock.inputs[connection.destConnector] = {
+              blockId: sourceBlock.id,
+              connector: connection.sourceConnector
+            };
           }
         }
       }
@@ -1498,34 +1480,39 @@ class ScriptFlow {
      * This is the main entry point for code generation
      */
     generateCode() {
+        // First process all connections
         this.processBlockConnections();
-    
-        // Find root blocks (not connected to any 'in')
-        const rootBlocks = this.blocks.filter(block =>
-            !this.connections.some(conn => conn.destBlockId === block.id && conn.destConnector === 'in')
+        
+        // Find root blocks (blocks with no parent connections)
+        const rootBlocks = this.blocks.filter(block => 
+          !this.connections.some(conn => 
+            conn.destBlockId === block.id && conn.destConnector === 'parent'
+          )
         );
-    
+        
         let finalCode = '';
+        const processedBlocks = new Set();
+        
+        // Generate code for each root block
         for (const rootBlock of rootBlocks) {
-            if (this.isPureInputBlock(rootBlock)) continue;
-            const code = this.generateBlockWithChildren(rootBlock, new Set());
-            if (code) finalCode += code + '\n\n';
+          const blockCode = this.generateBlockWithChildren(rootBlock, processedBlocks);
+          if (blockCode && blockCode.trim()) {
+            finalCode += blockCode + '\n\n';
+          }
         }
+        
         return finalCode.trim();
-    }
+      }
 
     /**
-     * Determine if a block is a pure input block
+     * Check if a block is a pure input block (with no flow connections)
      */
     isPureInputBlock(block) {
-        // Check for input blocks with no "in" connector
-        if (block.category === 'inputs') {
+        // Pure input blocks typically don't have 'in' connectors
         const blockDef = this.blockLibrary[block.category]?.blocks[block.type];
-        if (blockDef && (!blockDef.inputs || !blockDef.inputs.includes('in'))) {
-            return true;
-        }
-        }
-        return false;
+        return blockDef && 
+            (!blockDef.inputs || !blockDef.inputs.includes('in')) &&
+            block.category === 'inputs';
     }
 
     /**
@@ -1589,46 +1576,90 @@ class ScriptFlow {
     // Helper function to generate a block and all its children
     generateBlockWithChildren(block, processedBlocks = new Set()) {
         if (!block || processedBlocks.has(block.id)) return '';
-    
+        
+        // Mark this block as processed
         processedBlocks.add(block.id);
-    
-        // Recursively generate code for all child blocks (out->in connections)
-        let childrenContent = '';
+        
+        // Process input connections to get values for this block
+        this.processInputValues(block, processedBlocks);
+        
+        // Generate child blocks content first
+        let childContent = '';
         if (block.childBlocks && block.childBlocks.length > 0) {
-            // Sort children by y position for visual order
-            const childBlocks = block.childBlocks
-                .map(id => this.blocks.find(b => b.id === id))
-                .filter(Boolean)
-                .sort((a, b) => a.y - b.y);
-    
-            for (const childBlock of childBlocks) {
-                // Recursively generate code for each child and its children
-                const childCode = this.generateBlockWithChildren(childBlock, processedBlocks);
-                if (childCode) {
-                    childrenContent += childCode + '\n';
-                }
+          // Get children from flow connections
+          const childBlocks = block.childBlocks
+            .map(id => this.blocks.find(b => b.id === id))
+            .filter(Boolean)
+            .sort((a, b) => a.y - b.y); // Order by vertical position
+          
+          for (const child of childBlocks) {
+            if (!processedBlocks.has(child.id)) {
+              const childCode = this.generateBlockWithChildren(child, processedBlocks);
+              if (childCode) {
+                childContent += childCode + '\n';
+              }
             }
+          }
         }
-    
-        // Store the generated child content for use in the template
-        block.childBlocksContent = childrenContent.trim();
-    
-        // Process input connections for this block (for value/data inputs)
-        this.processBlockInputConnections(block, processedBlocks);
-    
-        // Generate code using the block's template
+        
+        // Store child content for template usage
+        block.childBlocksContent = childContent.trim();
+        
+        // Get the block definition
         const blockDef = this.blockLibrary[block.category]?.blocks[block.type];
-        if (!blockDef || typeof blockDef.template !== 'function') {
-            return `/* No template for ${block.category}.${block.type} */`;
-        }
-    
-        try {
+        if (!blockDef) return `/* Block ${block.id} has no definition */`;
+        
+        // Call the template function if available
+        if (typeof blockDef.template === 'function') {
+          try {
             return blockDef.template(block);
-        } catch (error) {
-            console.error(`Error generating code for ${block.category}.${block.type}:`, error);
-            return `/* Error: ${error.message} */`;
+          } catch (error) {
+            return `/* Error generating code for ${block.id}: ${error.message} */`;
+          }
         }
-    }
+        
+        return `/* No template for ${block.category}.${block.type} */`;
+      }
+
+      processInputValues(block, processedBlocks = new Set()) {
+        if (!block || !block.inputs) return;
+        
+        // For each connected input
+        for (const [inputName, connection] of Object.entries(block.inputs)) {
+          if (!connection || !connection.blockId) continue;
+          
+          // Find source block
+          const sourceBlock = this.blocks.find(b => b.id === connection.blockId);
+          if (!sourceBlock) continue;
+          
+          // Prevent circular references
+          if (processedBlocks.has(sourceBlock.id)) {
+            block.inputs[inputName] = `/* Circular reference to ${sourceBlock.id} */`;
+            continue;
+          }
+          
+          // Generate code for the source block
+          const tempProcessed = new Set(processedBlocks);
+          tempProcessed.add(block.id); // Prevent back-references
+          
+          // Process the source block's inputs first
+          this.processInputValues(sourceBlock, tempProcessed);
+          
+          // Get code from the source block
+          const sourceBlockDef = this.blockLibrary[sourceBlock.category]?.blocks[sourceBlock.type];
+          if (!sourceBlockDef || typeof sourceBlockDef.template !== 'function') {
+            block.inputs[inputName] = `/* No template for ${sourceBlock.category}.${sourceBlock.type} */`;
+            continue;
+          }
+          
+          try {
+            const sourceCode = sourceBlockDef.template(sourceBlock);
+            block.inputs[inputName] = sourceCode;
+          } catch (error) {
+            block.inputs[inputName] = `/* Error: ${error.message} */`;
+          }
+        }
+      }
     
     // Helper to generate just the content for child blocks
     generateChildBlocksContent(block, processedBlocks, indent = 0) {
@@ -1660,38 +1691,33 @@ class ScriptFlow {
     processBlockInputConnections(block, processedBlocks = new Set()) {
         if (!block || !block.inputs) return;
         
-        // Process all input connections
+        // Process each input connection
         for (const [inputName, connection] of Object.entries(block.inputs)) {
-          if (typeof connection === 'object' && connection.blockId) {
-            const sourceBlock = this.blocks.find(b => b.id === connection.blockId);
-            if (sourceBlock) {
-              // Skip if this would cause a circular reference
-              if (processedBlocks.has(sourceBlock.id)) {
-                block.inputs[inputName] = `/* Circular reference to ${sourceBlock.id} */`;
-                continue;
-              }
-              
-              // Generate code for the source block (without its children)
-              const newProcessedBlocks = new Set(processedBlocks);
-              newProcessedBlocks.add(block.id); // Add current block to prevent back-references
-              
-              // Process input connections for the source block
-              this.processBlockInputConnections(sourceBlock, newProcessedBlocks);
-              
-              // Look up the template
-              const sourceTemplate = this.blockLibrary[sourceBlock.category]?.blocks[sourceBlock.type];
-              if (sourceTemplate && typeof sourceTemplate.template === 'function') {
-                try {
-                  // Call the template function
-                  const sourceCode = sourceTemplate.template(sourceBlock);
-                  block.inputs[inputName] = sourceCode;
-                } catch (error) {
-                  console.error(`Error generating input code for ${sourceBlock.id}:`, error);
-                  block.inputs[inputName] = `/* Error: ${error.message} */`;
-                }
-              } else {
-                block.inputs[inputName] = `/* No template for ${sourceBlock.category}.${sourceBlock.type} */`;
-              }
+          if (!connection || !connection.blockId) continue;
+          
+          const sourceBlock = this.blocks.find(b => b.id === connection.blockId);
+          if (!sourceBlock) continue;
+          
+          // Prevent circular references
+          if (processedBlocks.has(sourceBlock.id)) {
+            block.inputs[inputName] = `/* Circular reference to ${sourceBlock.id} */`;
+            continue;
+          }
+          
+          // Process the source block's inputs first
+          const newProcessedBlocks = new Set(processedBlocks);
+          newProcessedBlocks.add(block.id);
+          this.processBlockInputConnections(sourceBlock, newProcessedBlocks);
+          
+          // Generate code for the source block
+          const sourceTemplate = this.blockLibrary[sourceBlock.category]?.blocks[sourceBlock.type];
+          if (sourceTemplate && typeof sourceTemplate.template === 'function') {
+            try {
+              const sourceCode = sourceTemplate.template(sourceBlock);
+              block.inputs[inputName] = sourceCode;
+            } catch (error) {
+              console.error(`Error generating input code for ${sourceBlock.id}:`, error);
+              block.inputs[inputName] = `/* Error: ${error.message} */`;
             }
           }
         }

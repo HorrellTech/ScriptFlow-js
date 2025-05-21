@@ -37,8 +37,22 @@ function getSafeMessageInput(input, defaultValue = "''") {
 }
 
 function initializeBlockLibrary() {
+    const updateConnectors = (block) => {
+        if (block.inputs) {
+          const idx = block.inputs.indexOf('in');
+          if (idx !== -1) {
+            block.inputs[idx] = 'parent';
+          }
+        }
+        if (block.outputs) {
+          const idx = block.outputs.indexOf('out');
+          if (idx !== -1) {
+            block.outputs[idx] = 'child';
+          }
+        }
+      };
 
-    return {
+    const library = {
         basics: {
             name: "Basics",
             blocks: {
@@ -1549,4 +1563,11 @@ function initializeBlockLibrary() {
             }
         }
     };
+
+    // Process all blocks to update connectors
+    Object.values(library).forEach(category => {
+        Object.values(category.blocks).forEach(updateConnectors);
+    });
+
+    return library;
 }
